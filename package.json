@@ -4,13 +4,13 @@
   "description": "Private, local speech to text for your desktop",
   "license": "MIT",
   "author": "AKDworks",
-  "homepage": "https://github.com/AKDworks/vokeyra#readme",
+  "homepage": "https://github.com/AKDworks/Vokeyra#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AKDworks/vokeyra.git"
+    "url": "https://github.com/AKDworks/Vokeyra.git"
   },
   "bugs": {
-    "url": "https://github.com/AKDworks/vokeyra/issues"
+    "url": "https://github.com/AKDworks/Vokeyra/issues"
   },
   "private": true,
   "type": "module",

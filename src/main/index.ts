@@ -221,7 +221,7 @@ function registerIpc(): void {
   }, true);
   handle('models:open', async () => { const error = await shell.openPath(models.root); if (error) throw new Error(error); });
   handle('app:open-data', async () => { const error = await shell.openPath(app.getPath('userData')); if (error) throw new Error(error); });
-  handle('app:open-github', () => shell.openExternal('https://github.com/AKDworks/vokeyra'));
+  handle('app:open-github', () => shell.openExternal('https://github.com/AKDworks/Vokeyra'));
   handle('history:open', async () => { const error = await shell.openPath(history.recordingsPath); if (error) throw new Error(error); });
   handle('history:audio', (id: unknown) => history.audio(safeId(id)));
   handle('history:favorite', async (id: unknown) => {
