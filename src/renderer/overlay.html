@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws://127.0.0.1:5173; object-src 'none'; base-uri 'none'" />
+  <link rel="icon" href="../../favicon/favicon.ico" sizes="any" />
+  <title>Vokeyra — запись</title>
+  <link rel="stylesheet" href="./overlay.css" />
+</head>
+<body>
+  <div class="indicator" aria-label="Индикатор диктовки">
+    <span class="dot"></span>
+    <div id="levels" class="levels" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <span id="phase" role="status">Микрофон…</span>
+    <button id="cancel" aria-label="Отменить запись"><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="m336-280-56-56 144-144-144-143 56-56 144 144 143-144 56 56-144 143 144 144-56 56-143-144-144 144Z"/></svg></button>
+  </div>
+  <script type="module" src="/overlay.ts"></script>
+</body>
+</html>
