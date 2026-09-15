@@ -123,14 +123,15 @@
         "punctuation": true
       },
       "license": "MIT",
-      "licenseUrl": "https://huggingface.co/ggerganov/whisper.cpp/blob/main/LICENSE",
+      "licenseUrl": "https://github.com/openai/whisper/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1",
       "entrypoint": "ggml-tiny-q5_1.bin",
       "artifacts": [
         {
           "filename": "ggml-tiny-q5_1.bin",
           "format": "file",
           "sizeBytes": 32152673,
-          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny-q5_1.bin",
           "sha256": "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7"
         }
       ]
@@ -245,7 +246,8 @@
       "speed": "Очень быстрая",
       "quality": "Базовое",
       "license": "MIT",
-      "licenseUrl": "https://huggingface.co/ggerganov/whisper.cpp/blob/main/LICENSE",
+      "licenseUrl": "https://github.com/openai/whisper/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1",
       "speedScore": 5,
       "qualityScore": 2,
       "recommended": false,
@@ -264,7 +266,7 @@
           "filename": "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21.bin",
           "format": "file",
           "sizeBytes": 77691713,
-          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-tiny.bin",
           "sha256": "be07e048e1e599ad46341c8d2a135645097a538221678b7acdd1b1919c6e1b21"
         }
       ]
@@ -391,14 +393,15 @@
         "punctuation": true
       },
       "license": "MIT",
-      "licenseUrl": "https://huggingface.co/ggerganov/whisper.cpp/blob/main/LICENSE",
+      "licenseUrl": "https://github.com/openai/whisper/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1",
       "entrypoint": "ggml-base-q5_1.bin",
       "artifacts": [
         {
           "filename": "ggml-base-q5_1.bin",
           "format": "file",
           "sizeBytes": 59707625,
-          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base-q5_1.bin",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base-q5_1.bin",
           "sha256": "422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898"
         }
       ]
@@ -513,7 +516,8 @@
       "speed": "Быстрая",
       "quality": "Среднее",
       "license": "MIT",
-      "licenseUrl": "https://huggingface.co/ggerganov/whisper.cpp/blob/main/LICENSE",
+      "licenseUrl": "https://github.com/openai/whisper/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1",
       "speedScore": 4,
       "qualityScore": 3,
       "recommended": true,
@@ -533,7 +537,7 @@
           "filename": "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe.bin",
           "format": "file",
           "sizeBytes": 147951465,
-          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base.bin",
           "sha256": "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"
         }
       ]
@@ -660,14 +664,15 @@
         "punctuation": true
       },
       "license": "MIT",
-      "licenseUrl": "https://huggingface.co/ggerganov/whisper.cpp/blob/main/LICENSE",
+      "licenseUrl": "https://github.com/openai/whisper/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1",
       "entrypoint": "ggml-small-q5_1.bin",
       "artifacts": [
         {
           "filename": "ggml-small-q5_1.bin",
           "format": "file",
           "sizeBytes": 190085487,
-          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small-q5_1.bin",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-small-q5_1.bin",
           "sha256": "ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb"
         }
       ]
@@ -782,7 +787,8 @@
       "speed": "Умеренная",
       "quality": "Повышенное",
       "license": "MIT",
-      "licenseUrl": "https://huggingface.co/ggerganov/whisper.cpp/blob/main/LICENSE",
+      "licenseUrl": "https://github.com/openai/whisper/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1",
       "speedScore": 3,
       "qualityScore": 4,
       "recommended": false,
@@ -801,7 +807,7 @@
           "filename": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b.bin",
           "format": "file",
           "sizeBytes": 487601967,
-          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-small.bin",
           "sha256": "1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b"
         }
       ]
@@ -928,14 +934,15 @@
         "punctuation": true
       },
       "license": "MIT",
-      "licenseUrl": "https://huggingface.co/ggerganov/whisper.cpp/blob/main/LICENSE",
+      "licenseUrl": "https://github.com/openai/whisper/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1",
       "entrypoint": "ggml-medium-q5_0.bin",
       "artifacts": [
         {
           "filename": "ggml-medium-q5_0.bin",
           "format": "file",
           "sizeBytes": 539212467,
-          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q5_0.bin",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-medium-q5_0.bin",
           "sha256": "19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f"
         }
       ]
@@ -1064,14 +1071,15 @@
         "punctuation": true
       },
       "license": "MIT",
-      "licenseUrl": "https://huggingface.co/ggerganov/whisper.cpp/blob/main/LICENSE",
+      "licenseUrl": "https://github.com/openai/whisper/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1",
       "entrypoint": "ggml-large-v3-turbo-q5_0.bin",
       "artifacts": [
         {
           "filename": "ggml-large-v3-turbo-q5_0.bin",
           "format": "file",
           "sizeBytes": 574041195,
-          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-turbo-q5_0.bin",
           "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2"
         }
       ]
@@ -1199,14 +1207,15 @@
         "punctuation": true
       },
       "license": "MIT",
-      "licenseUrl": "https://huggingface.co/ggerganov/whisper.cpp/blob/main/LICENSE",
+      "licenseUrl": "https://github.com/openai/whisper/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1",
       "entrypoint": "ggml-large-v3-q5_0.bin",
       "artifacts": [
         {
           "filename": "ggml-large-v3-q5_0.bin",
           "format": "file",
           "sizeBytes": 1080732091,
-          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-q5_0.bin",
+          "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-large-v3-q5_0.bin",
           "sha256": "d75795ecff3f83b5faa89d1900604ad8c780abd5739fae406de19f23ecd98ad1"
         }
       ]
@@ -1228,6 +1237,7 @@
       "description": "Русская диктовка с пунктуацией. INT8 · CPU.",
       "license": "MIT",
       "licenseUrl": "https://huggingface.co/istupakov/gigaam-v3-onnx/blob/322c3b29492673eb7d0b434bfa9dfb8653e34d02/LICENSE.txt",
+      "sourceUrl": "https://huggingface.co/istupakov/gigaam-v3-onnx/tree/322c3b29492673eb7d0b434bfa9dfb8653e34d02",
       "family": "GigaAM",
       "quantization": "INT8",
       "capabilities": {
@@ -1265,6 +1275,7 @@
       "description": "Русская E2E-модель с пунктуацией и нормализацией текста.",
       "license": "MIT",
       "licenseUrl": "https://github.com/salute-developers/GigaAM/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/Alexxerm/gigaam-v3-e2e-rnnt-sherpa-onnx/tree/c0acd38c8aeb2bdc04da221bd661ffcdb9645f7d",
       "family": "GigaAM",
       "quantization": "INT8",
       "capabilities": {
@@ -1312,8 +1323,31 @@
       "engine": "parakeet-tdt-0-6b-v3-int8",
       "version": "2bda32e-int8",
       "languages": [
-        "en", "es", "fr", "de", "bg", "hr", "cs", "da", "nl", "et", "fi", "el", "hu",
-        "it", "lv", "lt", "mt", "pl", "pt", "ro", "sk", "sl", "sv", "ru", "uk"
+        "en",
+        "es",
+        "fr",
+        "de",
+        "bg",
+        "hr",
+        "cs",
+        "da",
+        "nl",
+        "et",
+        "fi",
+        "el",
+        "hu",
+        "it",
+        "lv",
+        "lt",
+        "mt",
+        "pl",
+        "pt",
+        "ro",
+        "sk",
+        "sl",
+        "sv",
+        "ru",
+        "uk"
       ],
       "speed": "Быстрая",
       "quality": "Очень высокое",
@@ -1324,6 +1358,7 @@
       "description": "Многоязычная FastConformer-TDT с автоопределением языка и пунктуацией.",
       "license": "CC BY 4.0",
       "licenseUrl": "https://creativecommons.org/licenses/by/4.0/legalcode.en",
+      "sourceUrl": "https://huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/tree/2bda32ec70b097a55adaa07d9a7173915b43cc78",
       "family": "Parakeet TDT",
       "quantization": "INT8",
       "capabilities": {
@@ -1381,6 +1416,7 @@
       "description": "Компактная модель для быстрой английской диктовки на CPU.",
       "license": "MIT",
       "licenseUrl": "https://github.com/moonshine-ai/moonshine/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-tiny-en-int8/tree/bf2b762c076d8ea61e2af0b3851c9564fb77552e",
       "family": "Moonshine",
       "quantization": "INT8",
       "capabilities": {
@@ -1435,7 +1471,11 @@
       "engine": "gigaam-multilingual-ctc",
       "version": "458860e-int8",
       "languages": [
-        "ru", "kk", "ky", "uz", "en"
+        "ru",
+        "kk",
+        "ky",
+        "uz",
+        "en"
       ],
       "speed": "Быстрая",
       "quality": "Высокое",
@@ -1446,6 +1486,7 @@
       "description": "Многоязычная CTC-модель с поддержкой кириллицы и латиницы.",
       "license": "MIT",
       "licenseUrl": "https://github.com/salute-developers/GigaAM/blob/main/LICENSE",
+      "sourceUrl": "https://huggingface.co/istupakov/gigaam-multilingual-ctc-onnx/tree/458860e1983aef670dd9795fb6af603c82767d5d",
       "family": "GigaAM Multilingual",
       "quantization": "INT8",
       "capabilities": {

@@ -22,6 +22,17 @@ function safeArchiveEntry(path: string): boolean {
 async function exists(path: string): Promise<boolean> {
   try { await stat(path); return true; } catch { return false; }
 }
+function installErrorMessage(error: unknown): string {
+  const name = error && typeof error === 'object' && 'name' in error ? String(error.name) : '';
+  const message = (error instanceof Error ? error.message : String(error)).replace(/^Error:\s*/, '');
+  if (name === 'TimeoutError') return 'Загрузка модели заняла слишком много времени. Повторите загрузку.';
+  if (/ENOSPC|no space left/i.test(message)) return 'Недостаточно свободного места для загрузки модели.';
+  if (/EACCES|EPERM|permission denied/i.test(message)) return 'Нет доступа к папке моделей. Проверьте разрешения.';
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|network/i.test(message)) {
+    return 'Не удалось подключиться к серверу модели. Проверьте интернет и повторите загрузку.';
+  }
+  return message || 'Не удалось скачать модель.';
+}
 
 export class ModelManager {
   catalog: Catalog = { schemaVersion: 2, models: [] };
@@ -97,6 +108,7 @@ export class ModelManager {
         description: original.description ?? base.description,
         family: original.family ?? base.family, quantization: original.quantization ?? base.quantization,
         capabilities: original.capabilities ?? base.capabilities,
+        license: base.license, licenseUrl: base.licenseUrl, sourceUrl: original.sourceUrl ?? base.sourceUrl,
       } : original;
       const installed = this.installed.get(model.id) ?? null;
       return { model, installed, supported: supported(model.engine),
@@ -181,7 +193,7 @@ export class ModelManager {
     } catch (error) {
       await rm(staging, { recursive: true, force: true }).catch(() => {});
       this.report({ id: model.id, phase: controller.signal.aborted ? 'cancelled' : 'error', received: 0,
-        total: model.sizeBytes, error: controller.signal.aborted ? undefined : String(error) });
+        total: model.sizeBytes, error: controller.signal.aborted ? undefined : installErrorMessage(error) });
     } finally { this.active.delete(model.id); }
   }
   cancel(id: string): void { this.active.get(id)?.abort(); }

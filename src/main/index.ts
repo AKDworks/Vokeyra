@@ -15,6 +15,7 @@ import type { Settings, Snapshot } from '../shared/contracts';
 import { HistoryStore } from './history';
 import { RecordingOverlay, overlayUrl } from './overlay';
 import { defaultPreferences, validatePreferences } from '../shared/preferences';
+import { checkForUpdates, latestReleaseUrl } from './update';
 
 app.setName('Vokeyra');
 if (process.platform === 'win32') app.setAppUserModelId('org.vokeyra.desktop');
@@ -133,7 +134,7 @@ function languageForModel(model: { languages: string[] }, current: string): stri
 async function snapshot(): Promise<Snapshot> {
   return { settings, models: models.views(id => engines.has(id)), downloads: [...models.downloads.values()],
     modelsPath: models.root, engineReady: await engineReady(), hotkeyRegistered, busy: !!recording,
-    history: history.entries, dataPath: app.getPath('userData') };
+    history: history.entries, dataPath: app.getPath('userData'), appVersion: app.getVersion() };
 }
 // Short mutations are serialized so disk state and shortcuts cannot race each other.
 let mutations = Promise.resolve();
@@ -220,8 +221,20 @@ function registerIpc(): void {
     const next = { ...settings, selectedModelId: id, language: languageForModel(item.model, settings.language) }; await atomicJson(settingsPath, next); settings = next;
   }, true);
   handle('models:open', async () => { const error = await shell.openPath(models.root); if (error) throw new Error(error); });
+  handle('models:license', async (id: unknown) => {
+    const model = models.catalog.models.find(item => item.id === safeId(id));
+    if (!model) throw new Error('Модель не найдена в каталоге.');
+    await shell.openExternal(model.licenseUrl);
+  });
   handle('app:open-data', async () => { const error = await shell.openPath(app.getPath('userData')); if (error) throw new Error(error); });
+  handle('app:open-licenses', async () => {
+    const path = app.isPackaged ? join(process.resourcesPath, 'licenses', 'THIRD-PARTY-NOTICES.md') : join(app.getAppPath(), 'THIRD-PARTY-NOTICES.md');
+    if (!(await stat(path).catch(() => null))?.isFile()) throw new Error('Файл сторонних лицензий не найден. Переустановите Vokeyra.');
+    shell.showItemInFolder(path);
+  });
   handle('app:open-github', () => shell.openExternal('https://github.com/AKDworks/Vokeyra'));
+  handle('app:check-updates', () => checkForUpdates(app.getVersion()));
+  handle('app:open-latest-release', () => shell.openExternal(latestReleaseUrl));
   handle('history:open', async () => { const error = await shell.openPath(history.recordingsPath); if (error) throw new Error(error); });
   handle('history:audio', (id: unknown) => history.audio(safeId(id)));
   handle('history:favorite', async (id: unknown) => {

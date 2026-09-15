@@ -9,7 +9,7 @@ const stage = await mkdtemp(join(tmpdir(), 'vokeyra-pack-'));
 const installer = process.argv.includes('--installer');
 
 try {
-  for (const name of ['package-lock.json', 'LICENSE']) await cp(join(root, name), join(stage, name));
+  for (const name of ['package-lock.json', 'LICENSE', 'THIRD-PARTY-NOTICES.md']) await cp(join(root, name), join(stage, name));
   for (const name of ['dist', 'resources', 'logo', 'favicon']) await cp(join(root, name), join(stage, name), { recursive: true });
   const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
   manifest.build.directories.output = join(root, 'release');

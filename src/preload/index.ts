@@ -25,7 +25,11 @@ const api: DesktopApi = {
   openRecordingsFolder: () => ipcRenderer.invoke('history:open'),
   clearHistory: () => ipcRenderer.invoke('history:clear'),
   openDataFolder: () => ipcRenderer.invoke('app:open-data'),
+  openLicenses: () => ipcRenderer.invoke('app:open-licenses'),
   openGithub: () => ipcRenderer.invoke('app:open-github'),
+  openModelLicense: id => ipcRenderer.invoke('models:license', id),
+  checkForUpdates: () => ipcRenderer.invoke('app:check-updates'),
+  openLatestRelease: () => ipcRenderer.invoke('app:open-latest-release'),
   onCancel: callback => {
     const listener = () => callback(); ipcRenderer.on('recording:cancel-request', listener);
     return () => ipcRenderer.removeListener('recording:cancel-request', listener);

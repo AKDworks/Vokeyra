@@ -144,7 +144,10 @@ export class ModelsView {
       .filter((value, index, values) => value && values.indexOf(value) === index).join(' · ');
     details.append(title, node('p', 'model-description', metadata));
     if (model.license.toUpperCase() !== 'MIT') {
-      const license = node('p', 'model-license', `Лицензия: ${model.license}`); details.append(license);
+      const license = node('button', 'model-license', `Лицензия: ${model.license}`); license.type = 'button';
+      license.setAttribute('aria-label', `Открыть лицензию ${model.license} для ${model.name}`);
+      license.onclick = event => { event.stopPropagation(); void this.run(() => this.api.openModelLicense(model.id)); };
+      details.append(license);
     }
     const ratings = node('div', 'model-ratings');
     for (const [label, score, description] of [['Точность', model.qualityScore, model.quality], ['Скорость', model.speedScore, model.speed]] as const) {

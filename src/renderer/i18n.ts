@@ -36,8 +36,10 @@ const ruToEn: Record<string, string> = {
   'Экран': 'Display', 'Размер окна': 'Window size', 'Компактный · 780 × 600': 'Compact · 780 × 600',
   'Средний · 920 × 700': 'Medium · 920 × 700', 'Язык приложения': 'Application language',
   'Русский': 'Russian', 'Версия': 'Version', 'Поддержка развития': 'Support development', 'Скоро': 'Coming soon',
-  'Исходный код': 'Source code', 'Открыть GitHub': 'Open GitHub', 'Каталог данных приложения': 'Application data folder',
-  'Открыть': 'Open', 'Модель не выбрана': 'No model selected', 'Авто': 'Auto',
+  'Лицензии сторонних компонентов': 'Third-party licenses', 'Исходный код': 'Source code', 'Открыть GitHub': 'Open GitHub', 'Каталог данных приложения': 'Application data folder',
+  'Открыть': 'Open', 'Проверить наличие обновлений': 'Check for updates', 'Проверяем…': 'Checking…',
+  'Обновление не требуется': 'Up to date', 'Не удалось проверить · Повторить': 'Could not check · Retry',
+  'Модель не выбрана': 'No model selected', 'Авто': 'Auto',
   'Записей пока нет. Начните с горячей клавиши.': 'No recordings yet. Start with the keyboard shortcut.',
   'Копировать текст': 'Copy text', 'Убрать из избранного': 'Remove from favorites', 'В избранное': 'Add to favorites',
   'Распознать заново выбранной моделью': 'Transcribe again with selected model', 'Удалить запись и аудио': 'Delete recording and audio',
@@ -61,7 +63,12 @@ const ruToEn: Record<string, string> = {
   'Точная современная модель с ускоренным декодером и поддержкой многих языков.': 'A modern accurate model with faster decoding and multilingual support.',
   'Модель для максимальной точности, рассчитанная на мощный компьютер.': 'An accuracy-focused model intended for a powerful computer.',
   'Проверка SHA-256': 'Verifying SHA-256', 'Проверка SHA-256…': 'Verifying SHA-256…',
-  'Не удалось скачать модель.': 'Could not download the model.', 'Устройство недоступно': 'Device unavailable',
+  'Не удалось скачать модель.': 'Could not download the model.',
+  'Не удалось подключиться к серверу модели. Проверьте интернет и повторите загрузку.': 'Could not connect to the model server. Check your internet connection and try again.',
+  'Загрузка модели заняла слишком много времени. Повторите загрузку.': 'The model download took too long. Try again.',
+  'Недостаточно свободного места для загрузки модели.': 'There is not enough free space to download the model.',
+  'Нет доступа к папке моделей. Проверьте разрешения.': 'The models folder is not accessible. Check its permissions.',
+  'Устройство недоступно': 'Device unavailable',
   'Остановить сигнал': 'Stop sound', 'Выход': 'Output',
   'Подключаем микрофон…': 'Connecting microphone…', 'Идёт запись': 'Recording', 'Обработка…': 'Processing…',
   'Распознаём на устройстве…': 'Transcribing on device…', 'Нажмите горячую клавишу…': 'Press a keyboard shortcut…',
@@ -72,6 +79,8 @@ const ruToEn: Record<string, string> = {
   'Не удалось удалить запись.': 'Could not delete the recording.', 'Закрыть сообщение': 'Close message',
   'Обновить устройства звука': 'Refresh audio devices', 'Прослушать сигнал': 'Preview sound',
   'Обновить каталог': 'Refresh catalog', 'Только рекомендованные': 'Recommended only',
+  'Открывает сведения об авторах, источниках и лицензиях моделей и движков.': 'Opens attribution, source, and license information for models and engines.',
+  'О сторонних лицензиях': 'About third-party licenses',
   'Открывает страницу проекта на GitHub в браузере по умолчанию.': 'Opens the project page on GitHub in your default browser.',
   'Меняет язык интерфейса Vokeyra; выбранный язык сохраняется для следующих запусков.': 'Changes the Vokeyra interface language and remembers it for future launches.',
   'Ссылка для добровольной поддержки проекта появится в одном из следующих обновлений.': 'A link for voluntary project support will be added in a future update.',
@@ -109,6 +118,7 @@ const ruToEn: Record<string, string> = {
   'Скачайте и выберите модель во вкладке «Модели».': 'Download and select a model on the Models page.',
   'Дождитесь обновления выбранной модели.': 'Wait for the selected model to finish updating.',
   'Встроенный движок модели недоступен. Переустановите Vokeyra.': 'The bundled model engine is unavailable. Reinstall Vokeyra.',
+  'Файл сторонних лицензий не найден. Переустановите Vokeyra.': 'The third-party notices file is missing. Reinstall Vokeyra.',
   'Устройство не поддерживает запись 16 кГц.': 'The device does not support 16 kHz recording.',
   'У микрофона нет второго канала. Выберите первый или все каналы.': 'The microphone has no second channel. Select the first channel or all channels.',
   'Микрофон недоступен или не поддерживает выбранный канал. Проверьте настройки звука.': 'The microphone is unavailable or does not support the selected channel. Check the sound settings.',
@@ -140,7 +150,9 @@ function translateCore(value: string): string {
       .replace(/^Микрофон (\d+)$/, 'Microphone $1')
       .replace(/^Выход (\d+)$/, 'Output $1')
       .replace(/ · Авто$/, ' · Auto')
+      .replace(/^Доступна версия (.+) · Скачать$/, 'Version $1 available · Download')
       .replace(/^Лицензия: (.+)$/, 'License: $1')
+      .replace(/^Открыть лицензию (.+) для (.+)$/, 'Open $1 license for $2')
       .replace(/^(.+), активная модель$/, '$1, active model')
       .replace(/^(Точность|Скорость): (.+), (\d+) из 5$/, (_value, label: string, description: string, score: string) => `${ruToEn[label] ?? label}: ${ruToEn[description] ?? description}, ${score} of 5`)
       .replace(/^Удалить (.+)$/, 'Delete $1')
@@ -156,7 +168,9 @@ function translateCore(value: string): string {
     .replace(/^Microphone (\d+)$/, 'Микрофон $1')
     .replace(/^Output (\d+)$/, 'Выход $1')
     .replace(/ · Auto$/, ' · Авто')
+    .replace(/^Version (.+) available · Download$/, 'Доступна версия $1 · Скачать')
     .replace(/^License: (.+)$/, 'Лицензия: $1')
+    .replace(/^Open (.+) license for (.+)$/, 'Открыть лицензию $1 для $2')
     .replace(/^(.+), active model$/, '$1, активная модель')
     .replace(/^(Accuracy|Speed): (.+), (\d+) of 5$/, (_value, label: string, description: string, score: string) => `${enToRu[label] ?? label}: ${enToRu[description] ?? description}, ${score} из 5`)
     .replace(/^Delete (.+)$/, 'Удалить $1')

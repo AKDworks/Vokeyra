@@ -31,6 +31,7 @@ export interface Model {
   capabilities?: ModelCapabilities;
   license: string;
   licenseUrl: string;
+  sourceUrl?: string;
   entrypoint: string;
   artifacts: ModelArtifact[];
 }
@@ -91,6 +92,7 @@ export interface ModelView {
   updateAvailable: boolean;
   supported: boolean;
 }
+export interface UpdateCheckResult { currentVersion: string; latestVersion: string; updateAvailable: boolean }
 export interface Snapshot {
   settings: Settings;
   models: ModelView[];
@@ -101,6 +103,7 @@ export interface Snapshot {
   busy: boolean;
   history: HistoryEntry[];
   dataPath: string;
+  appVersion: string;
 }
 export interface DesktopApi {
   snapshot(): Promise<Snapshot>;
@@ -127,7 +130,11 @@ export interface DesktopApi {
   openRecordingsFolder(): Promise<void>;
   clearHistory(): Promise<void>;
   openDataFolder(): Promise<void>;
+  openLicenses(): Promise<void>;
   openGithub(): Promise<void>;
+  openModelLicense(id: string): Promise<void>;
+  checkForUpdates(): Promise<UpdateCheckResult>;
+  openLatestRelease(): Promise<void>;
   onCancel(callback: () => void): () => void;
   onShortcutCaptureEnded(callback: () => void): () => void;
   onToggle(callback: () => void): () => void;

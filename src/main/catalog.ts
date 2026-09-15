@@ -98,6 +98,7 @@ export function parseCatalog(value: unknown): Catalog {
       languages: m.languages.map(l => label(l, 'languages')),
       sizeBytes: packageFiles.items.reduce((sum, item) => sum + item.sizeBytes, 0),
       license: label(m.license, 'license'), licenseUrl: httpsUrl(m.licenseUrl),
+      sourceUrl: m.sourceUrl === undefined ? undefined : httpsUrl(m.sourceUrl),
       entrypoint: packageFiles.entrypoint, artifacts: packageFiles.items,
     };
   });

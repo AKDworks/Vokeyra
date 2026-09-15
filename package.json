@@ -1,6 +1,6 @@
 {
   "name": "vokeyra",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Private, local speech to text for your desktop",
   "license": "MIT",
   "author": "AKDworks",
@@ -92,6 +92,10 @@
       {
         "from": "resources/Sherpa-ONNX-LICENSE.txt",
         "to": "licenses/Sherpa-ONNX-LICENSE.txt"
+      },
+      {
+        "from": "THIRD-PARTY-NOTICES.md",
+        "to": "licenses/THIRD-PARTY-NOTICES.md"
       }
     ],
     "win": {

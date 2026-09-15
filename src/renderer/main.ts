@@ -171,6 +171,8 @@ async function refresh(fillSettings = false): Promise<void> {
   }
   if (!capturingHotkey) el('hotkey').textContent = prettyHotkey(snapshot.settings.hotkey);
   el('data-path').textContent = snapshot.dataPath;
+  el('app-version').textContent = `v${snapshot.appVersion}`;
+  el('footer-version').textContent = `Vokeyra ${snapshot.appVersion}`;
   const selected = snapshot.models.find(item => item.model.id === snapshot.settings.selectedModelId && item.installed);
   el('selected-model').textContent = selected ? `${selected.installed!.model.name} · ${snapshot.settings.language === 'auto' ? 'Авто' : snapshot.settings.language.toUpperCase()}` : 'Модель не выбрана';
   if (!initialized) {
@@ -262,8 +264,21 @@ el<HTMLTextAreaElement>('transcript').oninput = () => { el<HTMLButtonElement>('c
 el('copy').onclick = () => { void action(() => api.copyText(el<HTMLTextAreaElement>('transcript').value), 'Текст скопирован.'); };
 el('open-models').onclick = () => { void action(() => api.openModelsFolder()); };
 el('open-data').onclick = () => { void action(() => api.openDataFolder()); };
+el('open-licenses').onclick = () => { void action(() => api.openLicenses()); };
 el('open-github').onclick = () => { void action(() => api.openGithub()); };
 el('open-recordings').onclick = () => { void action(() => api.openRecordingsFolder()); };
+let updateAvailable = false;
+const updateButton = el<HTMLButtonElement>('check-updates');
+updateButton.onclick = () => {
+  if (updateAvailable) { void api.openLatestRelease().catch(report); return; }
+  updateButton.disabled = true; updateButton.textContent = 'Проверяем…';
+  void api.checkForUpdates().then(result => {
+    updateAvailable = result.updateAvailable;
+    updateButton.classList.toggle('update-available', updateAvailable);
+    updateButton.textContent = updateAvailable ? `Доступна версия ${result.latestVersion} · Скачать` : 'Обновление не требуется';
+  }).catch(() => { updateButton.textContent = 'Не удалось проверить · Повторить'; })
+    .finally(() => { updateButton.disabled = false; });
+};
 async function savePreferences(patch: Partial<Preferences>): Promise<void> {
   await api.saveSettings(patch);
   await refresh(true);

@@ -95,6 +95,6 @@ Settings, installed models, recordings, and history are stored in the Vokeyra ap
 
 ## License and acknowledgements
 
-Vokeyra source code is available under the [MIT License](LICENSE). Speech engines and model files keep their own licenses, which are shown in the model catalog and distributed with the relevant runtime notices.
+Vokeyra source code is available under the [MIT License](LICENSE). Speech engines and model files keep their own licenses. Attribution, immutable model sources, conversion details, and license links are listed in [Third-Party Notices](THIRD-PARTY-NOTICES.md).
 
 Vokeyra uses or supports work from [whisper.cpp](https://github.com/ggml-org/whisper.cpp), [OpenAI Whisper](https://github.com/openai/whisper), [GigaAM](https://github.com/salute-developers/GigaAM), [NVIDIA Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3), [Moonshine](https://github.com/moonshine-ai/moonshine), [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), and [ONNX Runtime](https://github.com/microsoft/onnxruntime).

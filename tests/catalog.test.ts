@@ -24,6 +24,14 @@ describe('catalog trust boundary', () => {
     expect(models.get('moonshine-tiny-en-int8')?.languages).toEqual(['en']);
     expect(models.get('gigaam-multilingual-ctc')?.languages).toEqual(['ru', 'kk', 'ky', 'uz', 'en']);
     expect([...models.values()].filter(model => model.recommended)).toHaveLength(5);
+    for (const model of models.values()) {
+      expect(model.sourceUrl).toMatch(/^https:\/\//);
+      for (const artifact of model.artifacts) expect(artifact.url).not.toContain('/resolve/main/');
+    }
+    const parakeet = models.get('parakeet-tdt-0-6b-v3-int8');
+    expect(parakeet?.developer).toBe('NVIDIA');
+    expect(parakeet?.license).toBe('CC BY 4.0');
+    expect(parakeet?.sourceUrl).toContain('/sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8/tree/');
   });
   it('rejects more than five editorial recommendations', () => {
     expect(() => parseCatalog({ ...catalog, models: catalog.models.slice(0, 6).map(model => ({ ...model, recommended: true })) })).toThrow('не больше пяти');

@@ -105,8 +105,9 @@
           <h2>О программе</h2>
           <div class="settings-group">
             <div class="setting-row"><div class="label-with-info"><span id="app-language-label">Язык приложения</span><button type="button" class="info" data-icon="info" aria-label="О языке приложения" data-help="Меняет язык интерфейса Vokeyra; выбранный язык сохраняется для следующих запусков."></button></div><div class="custom-select wide-select"><button id="app-language" class="select-trigger" type="button" role="combobox" aria-labelledby="app-language-label" aria-haspopup="listbox" aria-expanded="false" aria-controls="app-language-options"><span data-value>Русский</span><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"/></svg></button><div id="app-language-options" class="select-menu" role="listbox" aria-labelledby="app-language-label" hidden></div></div></div>
-            <div class="setting-row"><span>Версия</span><span class="muted">v0.1.0</span></div>
+            <div class="setting-row"><span>Версия</span><span id="app-version" class="muted"></span></div>
             <div class="setting-row"><div class="label-with-info"><span>Поддержка развития</span><button type="button" class="info" data-icon="info" aria-label="О поддержке развития" data-help="Ссылка для добровольной поддержки проекта появится в одном из следующих обновлений."></button></div><button class="secondary" type="button" disabled>Скоро</button></div>
+            <div class="setting-row"><div class="label-with-info"><span>Лицензии сторонних компонентов</span><button type="button" class="info" data-icon="info" aria-label="О сторонних лицензиях" data-help="Открывает сведения об авторах, источниках и лицензиях моделей и движков."></button></div><button id="open-licenses" class="secondary" type="button">Открыть</button></div>
             <div class="setting-row"><div class="label-with-info"><span>Исходный код</span><button type="button" class="info" data-icon="info" aria-label="Об исходном коде" data-help="Открывает страницу проекта на GitHub в браузере по умолчанию."></button></div><button id="open-github" class="secondary" type="button">Открыть GitHub</button></div>
             <div class="setting-row"><div class="label-with-info"><span>Каталог данных приложения</span><button type="button" class="info" data-icon="info" aria-label="О каталоге данных" data-help="Здесь хранятся настройки, история и служебные данные Vokeyra."></button></div><button id="open-data" class="secondary" type="button">Открыть</button></div>
             <div id="data-path" class="path inset"></div>
@@ -115,7 +116,7 @@
       </main>
       <div id="notice" role="alert" hidden><span id="notice-text"></span><button id="dismiss-notice" type="button" aria-label="Закрыть сообщение" data-icon="close"></button></div>
     </div>
-    <footer><span class="current-model"><span class="status-dot"></span><span id="selected-model">Модель не выбрана</span></span><span>Vokeyra 0.1.0</span></footer>
+    <footer><span class="current-model"><span class="status-dot"></span><span id="selected-model">Модель не выбрана</span></span><span class="footer-meta"><button id="check-updates" type="button">Проверить наличие обновлений</button><span aria-hidden="true">·</span><span id="footer-version"></span></span></footer>
   </div>
   <script type="module" src="/main.ts"></script>
 </body>

@@ -119,6 +119,8 @@ textarea::placeholder, input::placeholder { color: #a0a69a; }
 .history-entry small { color: var(--muted); font-size: 14px; }
 footer { grid-column: 1 / -1; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; padding: 0 16px; font-size: 14px; color: var(--muted); background: #252625; }
 footer button { display: flex; align-items: center; gap: 8px; background: none; border: 0; color: #b4bdad; font-size: 14px; padding: 5px 0; }
+footer button:hover, footer button.update-available { color: var(--accent); }
+.footer-meta { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #6a8e73; }
 .chevron { color: #909c88; }
 #notice { position: fixed; z-index: 110; top: 12px; right: 16px; max-width: 360px; display: flex; align-items: flex-start; gap: 12px; border: 1px solid #68524e; border-radius: 6px; background: #30322f; font-size: 14px; line-height: 1.5; padding: 10px 12px; overflow-wrap: anywhere; }
@@ -225,7 +227,8 @@ main:has(#general:not([hidden])), main:has(#models:not([hidden])), main:has(#his
 #models .model-title { flex-wrap: wrap; gap: 6px 9px; }
 #models .model-title strong { overflow-wrap: anywhere; }
 .model-badge { color: #b7d9c0; border: 1px solid #526c59; border-radius: 4px; padding: 1px 6px; line-height: 20px; }
-.model-license { color: var(--muted); margin-top: 3px; }
+.model-license { display: block; width: fit-content; color: var(--muted); margin-top: 3px; padding: 0; border: 0; background: transparent; text-decoration: underline; text-underline-offset: 2px; }
+.model-license:hover { color: var(--accent); }
 .model-description { color: var(--muted); margin-top: 4px; line-height: 1.4; }
 .model-ratings { display: grid; gap: 5px; flex: 0 0 150px; color: var(--muted); }
 .model-rating { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
