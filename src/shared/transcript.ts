@@ -1,4 +1,5 @@
 import type { Preferences, TextReplacement } from './contracts';
+import { removeFillerWords } from './filler-words';
 
 const escapePattern = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -19,8 +20,7 @@ export function applyTextReplacements(value: string, rules: readonly TextReplace
 export function prepareTranscript(value: string, settings: Pick<Preferences,
   'removeFillerWords' | 'punctuation' | 'appendSpace' | 'textReplacements'>): string {
   let text = value.trim();
-  if (settings.removeFillerWords) text = text.replace(/(^|[\s,])(?:э+|эм+|м-м+)(?=$|[\s,.!?;:])/giu, '$1')
-    .replace(/\s+([,.!?;:])/gu, '$1').replace(/\s{2,}/gu, ' ').trim();
+  if (settings.removeFillerWords) text = removeFillerWords(text);
   text = applyTextReplacements(text, settings.textReplacements);
   if (!settings.punctuation) text = text.replace(/\p{P}+/gu, '').replace(/\s{2,}/gu, ' ').trim();
   return text ? text + (settings.appendSpace ? ' ' : '') : '';

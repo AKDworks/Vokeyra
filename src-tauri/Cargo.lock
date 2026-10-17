@@ -4977,6 +4977,8 @@ dependencies = [
  "tauri-plugin-single-instance",
  "tauri-plugin-updater",
  "tokio",
+ "webview2-com",
+ "windows",
 ]
 
 [[package]]

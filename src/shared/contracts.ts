@@ -136,6 +136,8 @@ export interface DesktopApi {
   selectModel(id: string): Promise<void>;
   openModelsFolder(): Promise<void>;
   beginRecording(): Promise<string>;
+  resetMicrophonePermission(): Promise<void>;
+  openMicrophoneSettings(): Promise<void>;
   prepareRecordingAudio(id: string): Promise<void>;
   finishRecordingAudio(id: string): Promise<void>;
   transcribe(sessionId: string, wav: ArrayBuffer): Promise<string>;

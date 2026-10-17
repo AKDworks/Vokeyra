@@ -136,6 +136,7 @@ function handle(channel: string, fn: (...args: any[]) => unknown, serialize = fa
 
 async function persistSettings(next: Settings, allowUnavailableHotkey = false): Promise<void> {
   const previousHotkey = settings.hotkey;
+  const previousHotkeyRegistered = hotkeyRegistered;
 
   const needsRegistration = next.hotkey !== previousHotkey || !hotkeyRegistered;
   let nextHotkeyRegistered = hotkeyRegistered;
@@ -150,7 +151,7 @@ async function persistSettings(next: Settings, allowUnavailableHotkey = false): 
     if (needsRegistration && nextHotkeyRegistered && next.hotkey !== previousHotkey) await desktop.unregisterShortcut(next.hotkey);
     throw error;
   }
-  if (needsRegistration && previousHotkey !== next.hotkey) await desktop.unregisterShortcut(previousHotkey);
+  if (needsRegistration && previousHotkeyRegistered && previousHotkey !== next.hotkey) await desktop.unregisterShortcut(previousHotkey);
   hotkeyRegistered = nextHotkeyRegistered;
   settings = next;
   engines.setIdleTimeout(modelIdleTimeout(settings.modelUnloadDelay));

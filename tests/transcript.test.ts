@@ -2,6 +2,34 @@ import { describe, expect, it } from 'vitest';
 import { applyTextReplacements, prepareTranscript } from '../src/shared/transcript';
 import { defaultPreferences, validatePreferences } from '../src/shared/preferences';
 
+describe('filler removal', () => {
+  const enabled = { ...defaultPreferences, removeFillerWords: true };
+  it('cleans the hesitation spellings reported in dictated speech', () => {
+    expect(prepareTranscript('А-а, нужно подготовить э-э релиз. Это пять моделей, а-а, переход на Tauri. Ммм, как бы всё готово.', enabled))
+      .toBe('Нужно подготовить релиз. Это пять моделей, переход на Tauri. Всё готово.');
+  });
+  it('removes repeated sounds, separated insertions and conversational ну', () => {
+    expect(prepareTranscript('Ну, эм, я как бы говорю. Короче, м-м-м, всё работает.', enabled))
+      .toBe('Я говорю. Всё работает.');
+    expect(prepareTranscript('Ну и ещё один пункт.', enabled)).toBe('И ещё один пункт.');
+    expect(prepareTranscript('Так, ну что теперь?', enabled)).toBe('Так, что теперь?');
+  });
+  it('preserves meaningful words, conditionals, units and names', () => {
+    const text = 'Вот документ, то есть готовый текст. Как бы ни было, сделай короче. А длина — 10 м. Это iPhone и эмаль.';
+    expect(prepareTranscript(text, enabled)).toBe(text);
+    expect(prepareTranscript('эм, iPhone работает.', enabled)).toBe('iPhone работает.');
+  });
+  it('does not leave punctuation from hesitation-only sentences', () => {
+    expect(prepareTranscript('Эм. Э-э, привет! Ммм.', enabled)).toBe('Привет!');
+    expect(prepareTranscript('Эм. Ну. Ммм…', enabled)).toBe('');
+  });
+  it('keeps the original dictated fillers when disabled and formats punctuation afterwards', () => {
+    const text = 'А-а, я как бы говорю.';
+    expect(prepareTranscript(text, defaultPreferences)).toBe(text);
+    expect(prepareTranscript(text, { ...enabled, punctuation: false })).toBe('Я говорю');
+  });
+});
+
 describe('word replacements', () => {
   it('replaces whole Unicode words, ignores case and preserves the chosen spelling', () => {
     expect(applyTextReplacements('Вакейра, ВАКЕЙРА! вакейрами кот котёнок кот_1', [

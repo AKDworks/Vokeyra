@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod microphone;
+
 use serde_json::{json, Value};
 use std::{
     collections::HashMap,
@@ -106,6 +108,21 @@ async fn service_request(
             && ["overlay:state", "overlay:cancel"].contains(&method.as_str()))
     {
         return Err("Недоверенный источник запроса.".into());
+    }
+    if method == "microphone:reset-permission" {
+        return microphone::reset_permission(window)
+            .await
+            .map(|()| Value::Null);
+    }
+    if method == "microphone:open-settings" {
+        #[cfg(windows)]
+        return app
+            .opener()
+            .open_url("ms-settings:privacy-microphone", None::<&str>)
+            .map(|()| Value::Null)
+            .map_err(|e| e.to_string());
+        #[cfg(not(windows))]
+        return Err("Откройте настройки доступа к микрофону вашей системы.".into());
     }
     // Never expose service lifecycle or host operations to a renderer.
     let allowed = [
@@ -352,9 +369,12 @@ async fn host_request(app: tauri::AppHandle, method: &str, args: &[Value]) -> Re
             if linux_wayland() {
                 return Ok(Value::Null);
             }
-            app.global_shortcut()
-                .unregister(text()?.replace("CommandOrControl", "Ctrl").as_str())
-                .map_err(|e| e.to_string())?;
+            let key = text()?.replace("CommandOrControl", "Ctrl");
+            if app.global_shortcut().is_registered(key.as_str()) {
+                app.global_shortcut()
+                    .unregister(key.as_str())
+                    .map_err(|e| e.to_string())?;
+            }
             Ok(Value::Null)
         }
         "shortcut:clear" => {

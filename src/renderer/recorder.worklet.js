@@ -5,6 +5,8 @@ class PcmRecorder extends AudioWorkletProcessor {
     this.recording = true;
     this.buffer = new Float32Array(2048);
     this.length = 0;
+    this.levelEnergy = 0;
+    this.levelSamples = 0;
     this.port.onmessage = event => {
       if (event.data === 'stop') {
         this.recording = false;
@@ -23,6 +25,12 @@ class PcmRecorder extends AudioWorkletProcessor {
         sample /= channels.length;
       } else sample = channels[this.channel === 'second' ? 1 : 0]?.[i] ?? 0;
       this.buffer[this.length++] = sample;
+      this.levelEnergy += sample * sample;
+      if (++this.levelSamples === 640) {
+        // Meter updates every 40 ms; PCM batching stays independent.
+        this.port.postMessage({ type: 'level', rms: Math.sqrt(this.levelEnergy / this.levelSamples) });
+        this.levelEnergy = 0; this.levelSamples = 0;
+      }
       if (this.length === this.buffer.length) {
         this.port.postMessage(this.buffer);
         this.length = 0;

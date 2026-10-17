@@ -1,0 +1,37 @@
+name: Windows x64 build
+
+# Verification only. Signing and release publication require separate approval.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['linux-0.3.0']
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.18.0'
+          cache: npm
+      - name: Set up Rust
+        run: rustup toolchain install stable --profile minimal --no-self-update
+      - run: npm.cmd ci
+        env:
+          ONNXRUNTIME_NODE_INSTALL: skip
+      - run: npm.cmd test
+      - name: Build verification installer
+        run: npm.cmd run dist:win -- --unsigned
+        env:
+          CARGO_BUILD_JOBS: '2'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Vokeyra-windows-x64-verification
+          if-no-files-found: error
+          retention-days: 14
+          path: src-tauri/target/release/bundle/nsis/*_x64-setup.exe

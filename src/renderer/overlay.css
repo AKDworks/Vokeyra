@@ -4,13 +4,7 @@ body { margin: 0; padding: 6px; background: transparent; overflow: hidden; user-
 .indicator { height: 44px; display: flex; align-items: center; gap: 13px; padding: 0 9px 0 16px; border: 1px solid #464d42; border-radius: 24px; background: #292d28; }
 .dot { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: #8bb99a; }
 .levels { display: flex; align-items: center; gap: 3px; height: 24px; }
-.levels i { width: 3px; height: 4px; border-radius: 2px; background: #8bb99a; transition: height 100ms ease; }
-.levels[data-level="1"] i { height: 7px; }
-.levels[data-level="2"] i { height: 11px; }
-.levels[data-level="3"] i { height: 16px; }
-.levels[data-level="4"] i { height: 22px; }
-.levels i:nth-child(3n) { transform: scaleY(.55); }
-.levels i:nth-child(3n + 1) { transform: scaleY(.8); }
+.levels i { width: 3px; height: 3px; border-radius: 2px; background: #8bb99a; transition: height 60ms linear; }
 #phase { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; text-align: center; }
 body[data-phase="starting"] .levels, body[data-phase="transcribing"] .levels { display: none; }
 body[data-overlay-mode="minimal"] .levels { display: none; }

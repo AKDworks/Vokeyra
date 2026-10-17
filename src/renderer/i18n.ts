@@ -3,6 +3,14 @@ import type { Settings } from '../shared/contracts';
 export type AppLanguage = Settings['appLanguage'];
 
 const ruToEn: Record<string, string> = {
+  'Доступ к микрофону': 'Microphone access', 'Разрешить': 'Allow', 'Проверить доступ': 'Check access',
+  'Запрашиваем доступ…': 'Requesting access…', 'Настройки Windows': 'Windows settings',
+  'Доступ к микрофону разрешён.': 'Microphone access granted.',
+  'Доступ к микрофону заблокирован. Нажмите «Разрешить» и подтвердите доступ.': 'Microphone access is blocked. Click Allow and confirm access.',
+  'Не удалось повторно запросить доступ к микрофону.': 'Could not request microphone access again.',
+  'Не удалось получить доступ к микрофону.': 'Could not access the microphone.',
+  'Не удалось открыть настройки микрофона.': 'Could not open microphone settings.',
+  'Откройте настройки доступа к микрофону вашей системы.': 'Open your system microphone privacy settings.',
   'В Wayland запись запускается кнопкой. Результат копируется в буфер обмена.': 'On Wayland, start recording with the button. The result is copied to the clipboard.',
   'Для автоматической вставки в Linux установите xdotool.': 'Install xdotool to enable automatic insertion on Linux.',
   'Для буфера обмена Wayland установите wl-clipboard.': 'Install wl-clipboard to use the Wayland clipboard.',
@@ -130,7 +138,7 @@ const ruToEn: Record<string, string> = {
   'После вставки текста автоматически нажимает Enter или Ctrl+Enter в активном приложении.': 'Automatically presses Enter or Ctrl+Enter in the active application after inserting text.',
   'Помогает движку отделять произнесённую речь от пауз и фонового шума.': 'Helps the engine separate speech from pauses and background noise.',
   'Сохраняет точки, запятые и другие знаки препинания в распознанном тексте.': 'Keeps periods, commas, and other punctuation in transcribed text.',
-  'После распознавания удаляет отдельные междометия вроде «ээ» и «эм», сохраняя остальной текст.': 'Removes isolated filler sounds after transcription while preserving the rest of the text.',
+  'После распознавания удаляет «э-э», «а-а», «ммм» и отдельные разговорные вставки, сохраняя смысловые слова.': 'Removes hesitation sounds and isolated conversational fillers after transcription while preserving meaningful words.',
   'Передаёт имена и специальные термины движкам, которые поддерживают подсказки распознавания.': 'Provides names and specialist terms to engines that support transcription hints.',
   'Добавляет один пробел в конец результата, чтобы следующая диктовка не склеивалась с текстом.': 'Adds one space after the result so the next dictation does not join the previous text.',
   'Задаёт число записей для режима «Хранить последние»; допустимо от 1 до 100.': 'Sets the number of entries kept by the “Keep latest” mode, from 1 to 100.',

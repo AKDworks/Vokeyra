@@ -25,6 +25,7 @@ jobs:
           sudo apt-get install -y build-essential cmake pkg-config curl wget file \
             libwebkit2gtk-4.1-dev libssl-dev libxdo-dev libayatana-appindicator3-dev \
             librsvg2-dev patchelf libfuse2 xdotool xclip wl-clipboard xvfb xterm \
+            webkit2gtk-driver pulseaudio pulseaudio-utils espeak dbus-x11 \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-pulseaudio
       - name: Set up Rust
         run: rustup toolchain install stable --profile minimal --no-self-update
@@ -32,13 +33,46 @@ jobs:
         env:
           ONNXRUNTIME_NODE_INSTALL: skip
       - run: npm test
+      - name: Restore Linux build cache
+        id: build-cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry/
+            ~/.cargo/git/
+            src-tauri/target/
+            .tmp/whisper-linux-1.8.3/
+          key: linux-x64-build-v1-${{ hashFiles('src-tauri/Cargo.lock') }}
       - name: Build Debian and AppImage verification packages
         env:
           CARGO_BUILD_JOBS: '2'
           APPIMAGE_EXTRACT_AND_RUN: '1'
         run: npm run dist:linux:unsigned
+      - name: Save Linux build cache
+        if: steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry/
+            ~/.cargo/git/
+            src-tauri/target/
+            .tmp/whisper-linux-1.8.3/
+          key: ${{ steps.build-cache.outputs.cache-primary-key }}
       - name: Check packaged runtimes and X11 paste integration
         run: xvfb-run -a node scripts/smoke-linux.mjs
+      - name: Install the generated Debian package
+        run: sudo apt-get install -y "$(realpath src-tauri/target/release/bundle/deb/*.deb)"
+      - name: Check installed UI, virtual microphone, transcription and AppImage
+        timeout-minutes: 10
+        run: dbus-run-session -- xvfb-run -a node scripts/smoke-linux-ui.mjs
+      - name: Upload desktop verification reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Vokeyra-linux-desktop-reports
+          if-no-files-found: warn
+          retention-days: 14
+          path: .tmp/linux-ui-reports/
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: Vokeyra-linux-x64-verification

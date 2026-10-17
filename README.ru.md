@@ -109,4 +109,6 @@ Vokeyra — бесплатное приложение с открытым исх
 
 Исходный код Vokeyra распространяется по [лицензии MIT](LICENSE). У речевых движков и файлов моделей есть собственные лицензии. Авторы, закреплённые источники моделей, сведения о конвертации и ссылки на лицензии перечислены в [уведомлениях о сторонних компонентах](THIRD-PARTY-NOTICES.md).
 
+[Политика конфиденциальности](PRIVACY.md) · [Code signing policy — политика подписи](docs/CODE_SIGNING.md)
+
 Vokeyra использует или поддерживает разработки [whisper.cpp](https://github.com/ggml-org/whisper.cpp), [OpenAI Whisper](https://github.com/openai/whisper), [GigaAM](https://github.com/salute-developers/GigaAM), [NVIDIA Parakeet](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3), [Moonshine](https://github.com/moonshine-ai/moonshine), [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) и [ONNX Runtime](https://github.com/microsoft/onnxruntime).

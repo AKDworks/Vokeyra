@@ -2,6 +2,7 @@ import type { Preferences } from '../shared/contracts';
 import { CustomSelect, type SelectOption } from './custom-select';
 import { playFeedback } from './audio-feedback';
 import { setIcon } from './icons';
+import { microphoneAccessDenied, MicrophoneAccessError } from './microphone-errors';
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 export class SoundSettings {
@@ -95,7 +96,7 @@ export class SoundSettings {
       }
       this.devices = await navigator.mediaDevices.enumerateDevices();
       this.renderDevices();
-    } catch { this.report(new Error('Не удалось получить список устройств. Проверьте доступ к микрофону в Windows.')); }
+    } catch (error) { this.report(microphoneAccessDenied(error) ? new MicrophoneAccessError() : new Error('Не удалось получить список устройств. Проверьте доступ к микрофону в Windows.')); }
     finally { this.scanning = false; this.renderDisabled(); }
   }
 }

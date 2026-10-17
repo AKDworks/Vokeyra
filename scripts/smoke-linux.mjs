@@ -77,4 +77,8 @@ try {
   assert.equal((await readFile(result, 'utf8')).trim(), text);
 } finally { terminal.kill(); }
 console.log('Linux runtime, model downloads, native inference, and X11 text insertion passed.');
+await writeFile(resolve('.tmp/linux-runtime-report.json'), JSON.stringify({
+  modelsPath: models.root, engines: ['whisper-tiny-q5-1', 'vosk-small-ru-int8', 'gigaam-v3-e2e-ctc'],
+  nativeInference: true, x11TextInsertion: true,
+}, null, 2) + '\n');
 // Keep the isolated artifacts in ignored .tmp for diagnostics; never touch user data.

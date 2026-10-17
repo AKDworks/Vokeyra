@@ -44,6 +44,13 @@ p { line-height: 1.55; margin: 0; }
 .settings-group { border: 1px solid var(--line); border-radius: 7px; }
 .setting-row { min-height: 51px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .setting-row + .setting-row { border-top: 1px solid var(--line); }
+.microphone-access { padding: 10px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.microphone-access-copy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.microphone-access-title { font-weight: 500; }
+.microphone-access-help { color: var(--muted); }
+.microphone-access + .setting-row { border-top: 1px solid var(--line); }
+.microphone-access .subtle { color: var(--accent); }
+#allow-microphone { white-space: nowrap; }
 .setting-row > label, .setting-row > span:first-child { font-weight: 500; }
 .row-controls { display: flex; gap: 9px; align-items: center; flex-shrink: 0; }
 button.secondary, .key-button, .select-trigger, input { background: #333532; color: #e1e4dd; border: 1px solid #55594f; border-radius: 5px; padding: 7px 11px; }

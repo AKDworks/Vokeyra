@@ -23,6 +23,7 @@ const api: DesktopApi = {
   deleteModel: id => call('models:delete', id), deleteAllModels: () => call('models:delete-all'),
   selectModel: id => call('models:select', id), openModelsFolder: () => call('models:open'),
   beginRecording: () => call('recording:begin'), prepareRecordingAudio: id => call('recording:prepare-audio', id),
+  resetMicrophonePermission: () => call('microphone:reset-permission'), openMicrophoneSettings: () => call('microphone:open-settings'),
   finishRecordingAudio: id => call('recording:finish-audio', id),
   transcribe: (id, wav) => call('recording:transcribe', id, encode(wav)),
   cancelRecording: () => call('recording:cancel'), copyText: text => call('clipboard:copy', text),

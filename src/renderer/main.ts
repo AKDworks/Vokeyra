@@ -11,6 +11,8 @@ import brandLogo from '../../logo/vokeyra-logo.png?url';
 import { SoundSettings } from './sound-settings';
 import { playFeedback } from './audio-feedback';
 import { onAppLanguageChange, setAppLanguage, tr } from './i18n';
+import { MicrophoneAccess } from './microphone-access';
+import { MicrophoneAccessError } from './microphone-errors';
 
 (document.getElementById('brand-logo') as HTMLImageElement).src = brandLogo;
 setupIcons();
@@ -28,9 +30,11 @@ let recordingTimer: ReturnType<typeof setInterval> | undefined;
 let initialized = false;
 let capturingHotkey = false;
 let savingHotkey = false;
+let pendingHotkey: { accelerator: string; code: string } | undefined;
 let heldSession = false;
 let updateInProgress = false;
 let maintenanceInProgress = false;
+let microphonePermissionBusy = false;
 let confirmationOpen = false;
 const downloads = new Map<string, DownloadState>();
 const appLanguageSelect = new CustomSelect(el<HTMLButtonElement>('app-language'), el('app-language-options'), [
@@ -96,6 +100,9 @@ for (const [id, key] of switchSettings) el<HTMLButtonElement>(id).onclick = () =
   void savePreferences({ [key]: !snapshot.settings[key] }).catch(report);
 };
 const soundSettings = new SoundSettings(savePreferences, report);
+const microphoneAccess = new MicrophoneAccess(api, () => soundSettings.refreshDevices(false), requesting => {
+  microphonePermissionBusy = requesting; updateControls();
+});
 
 const modelsView = new ModelsView(api, () => refresh(true));
 const historyView = new HistoryView(el('history-list'), api, refresh, async id => {
@@ -112,6 +119,7 @@ function notice(message: string, error = false): void {
 }
 el('dismiss-notice').onclick = () => notice('');
 function report(error: unknown): void {
+  if (error instanceof MicrophoneAccessError) { microphoneAccess.blocked(); showTab('general'); }
   const message = error instanceof Error ? error.message : String(error);
   notice(message.replace(/^Error invoking remote method '[^']+': Error: /, ''), true);
 }
@@ -135,21 +143,24 @@ function showTab(name: string): void {
 document.querySelectorAll<HTMLButtonElement>('nav button').forEach(button => button.addEventListener('click', () => showTab(button.dataset.tab!)));
 function updateControls(): void {
   const recordingBusy = mode !== 'idle';
-  const busy = recordingBusy || updateInProgress || maintenanceInProgress;
+  const busy = recordingBusy || updateInProgress || maintenanceInProgress || microphonePermissionBusy;
   historyView.setBusy(busy || capturingHotkey);
   appLanguageSelect.setDisabled(busy || capturingHotkey);
   languageSelect.setDisabled(busy || capturingHotkey);
   soundSettings.setBusy(busy || capturingHotkey);
+  microphoneAccess.setBusy(busy || capturingHotkey);
   settingSelectList.forEach(select => select.setDisabled(busy || capturingHotkey));
   el('cancel-recording').hidden = !recordingBusy;
-  el<HTMLButtonElement>('record').disabled = updateInProgress || maintenanceInProgress || capturingHotkey || mode === 'starting' || mode === 'transcribing';
+  el<HTMLButtonElement>('record').disabled = updateInProgress || maintenanceInProgress || microphonePermissionBusy || capturingHotkey || mode === 'starting' || mode === 'transcribing';
   el('record').classList.toggle('recording', mode === 'recording');
   el('record').setAttribute('aria-label', mode === 'recording' ? 'Остановить запись' : 'Начать запись');
   el('record').textContent = mode === 'recording' ? 'Завершить' : mode === 'transcribing' ? 'Обработка…' : 'Начать запись';
   el('record-status').textContent = { idle: 'Готово к записи', starting: 'Подключаем микрофон…', recording: 'Идёт запись', transcribing: 'Распознаём на устройстве…' }[mode];
-  document.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement>('#advanced input, #advanced button, #language, #hotkey').forEach(item => {
+  document.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement>('#advanced input, #advanced button, #language').forEach(item => {
     item.disabled = busy || capturingHotkey || item.dataset.unavailable === 'true';
   });
+  // Keep the capture button focused and enabled so WebView2 receives native keys.
+  el<HTMLButtonElement>('hotkey').disabled = busy;
   if (snapshot) {
     el<HTMLButtonElement>('hotkey').disabled ||= !snapshot.desktop.globalShortcut;
     el<HTMLButtonElement>('push-to-talk').disabled ||= !snapshot.desktop.pushToTalk;
@@ -214,7 +225,7 @@ async function refresh(fillSettings = false): Promise<void> {
 function renderHistory(): void { historyView.render(snapshot.history); }
 function renderModels(): void { if (snapshot) modelsView.update(snapshot, downloads, mode !== 'idle' || capturingHotkey || updateInProgress || maintenanceInProgress); }
 async function toggleRecording(fromHold = false): Promise<void> {
-  if (updateInProgress || maintenanceInProgress || confirmationOpen || capturingHotkey || mode === 'starting' || mode === 'transcribing') return;
+  if (updateInProgress || maintenanceInProgress || microphonePermissionBusy || confirmationOpen || capturingHotkey || mode === 'starting' || mode === 'transcribing') return;
   const token = ++generation;
   try {
     if (mode === 'idle') {
@@ -489,6 +500,7 @@ el<HTMLInputElement>('history-limit').onchange = () => {
   void savePreferences({ historyLimit: value }).catch(report);
 };
 el('hotkey').onclick = () => {
+  if (capturingHotkey || savingHotkey) return;
   void (async () => {
     await api.beginShortcutCapture();
     capturingHotkey = true;
@@ -496,10 +508,12 @@ el('hotkey').onclick = () => {
     el('hotkey').classList.add('capturing');
     el('cancel-hotkey').hidden = false;
     updateControls(); notice('');
+    el('hotkey').focus({ preventScroll: true });
   })().catch(report);
 };
 function finishHotkeyCapture(): void {
   capturingHotkey = false;
+  pendingHotkey = undefined;
   el('hotkey').classList.remove('capturing');
   el('cancel-hotkey').hidden = true;
   el('hotkey').textContent = prettyHotkey(snapshot.settings.hotkey);
@@ -512,9 +526,20 @@ document.addEventListener('keydown', event => {
   if (!capturingHotkey) return;
   event.preventDefault();
   event.stopPropagation();
-  if (event.repeat || savingHotkey) return;
+  if (event.repeat || savingHotkey || pendingHotkey) return;
   const key = acceleratorFromEvent(event);
   if (!key) return;
+  pendingHotkey = { accelerator: key, code: event.code };
+  el('hotkey').textContent = prettyHotkey(key);
+}, true);
+document.addEventListener('keyup', event => {
+  if (!capturingHotkey) return;
+  event.preventDefault();
+  event.stopPropagation();
+  if (!pendingHotkey || pendingHotkey.code !== event.code || savingHotkey) return;
+  const key = pendingHotkey.accelerator;
+  pendingHotkey = undefined;
+  // Register only after release; assigning a held key must not start recording.
   savingHotkey = true;
   void savePreferences({ hotkey: key }).then(() => notice('Горячая клавиша сохранена.')).catch(report).finally(() => { savingHotkey = false; });
 }, true);
@@ -528,7 +553,7 @@ if (!api) {
   el('boot-screen').hidden = true;
   document.body.classList.remove('booting');
   document.body.removeAttribute('aria-busy');
-  return soundSettings.refreshDevices(true);
+  return Promise.all([microphoneAccess.initialize(snapshot.desktop.platform === 'windows'), soundSettings.refreshDevices(false)]);
 }).catch(error => {
   el('boot-screen').hidden = true;
   document.body.classList.remove('booting');

@@ -1,6 +1,8 @@
 import workletUrl from './recorder.worklet.js?url';
 import { encodeWav } from '../shared/wav';
 import { MAX_RECORDING_SECONDS, type Settings } from '../shared/contracts';
+import { microphoneAccessDenied, MicrophoneAccessError } from './microphone-errors';
+import { microphoneLevel } from '../shared/audio-level';
 
 export class MicrophoneRecorder {
   private stream?: MediaStream;
@@ -9,6 +11,7 @@ export class MicrophoneRecorder {
   private node?: AudioWorkletNode;
   private chunks: Float32Array[] = [];
   private count = 0;
+  private level = 0;
   private timer?: ReturnType<typeof setTimeout>;
   private cancelled = false;
   private flushed?: () => void;
@@ -26,14 +29,15 @@ export class MicrophoneRecorder {
       await this.context.audioWorklet.addModule(workletUrl);
       if (this.cancelled) throw new Error('Запись отменена.');
       this.node = new AudioWorkletNode(this.context, 'pcm-recorder', { processorOptions: { inputChannel: options.inputChannel } });
-      this.node.port.onmessage = (event: MessageEvent<Float32Array | string>) => {
+      this.node.port.onmessage = (event: MessageEvent<Float32Array | string | { type: 'level'; rms: number }>) => {
         if (event.data === 'stopped') { this.flushed?.(); return; }
         if (event.data instanceof Float32Array) {
           const chunk = event.data.subarray(0, Math.max(0, MAX_RECORDING_SECONDS * 16000 - this.count));
           this.chunks.push(chunk); this.count += chunk.length;
-          let energy = 0;
-          for (const sample of chunk) energy += sample * sample;
-          onLevel(Math.min(1, Math.sqrt(energy / Math.max(1, chunk.length)) * 5));
+        } else if (typeof event.data === 'object' && event.data.type === 'level') {
+          const target = microphoneLevel(event.data.rms);
+          this.level += (target - this.level) * (target > this.level ? .85 : .45);
+          onLevel(this.level);
         }
       };
       const channels = stream.getAudioTracks()[0]?.getSettings().channelCount;
@@ -47,7 +51,7 @@ export class MicrophoneRecorder {
     } catch (error) {
       await this.dispose();
       if (error instanceof DOMException && error.name === 'OverconstrainedError') throw new Error('Микрофон недоступен или не поддерживает выбранный канал. Проверьте настройки звука.');
-      if (error instanceof DOMException && error.name === 'NotAllowedError') throw new Error('Нет доступа к микрофону. Разрешите его в параметрах конфиденциальности Windows.');
+      if (microphoneAccessDenied(error)) throw new MicrophoneAccessError();
       throw error;
     }
   }
