@@ -36,6 +36,7 @@ export interface Model {
   artifacts: ModelArtifact[];
 }
 export interface Catalog { schemaVersion: 2; models: Model[] }
+export interface TextReplacement { from: string; to: string }
 export interface Settings {
   appLanguage: 'ru' | 'en';
   hotkey: string;
@@ -62,6 +63,7 @@ export interface Settings {
   punctuation: boolean;
   removeFillerWords: boolean;
   customVocabulary: string[];
+  textReplacements: TextReplacement[];
   appendSpace: boolean;
   historyLimit: number;
   historyRetention: 'never' | 'limit' | '3d' | '2w' | '3m';
@@ -92,8 +94,25 @@ export interface ModelView {
   updateAvailable: boolean;
   supported: boolean;
 }
-export interface UpdateCheckResult { currentVersion: string; latestVersion: string; updateAvailable: boolean }
+export interface AppUpdateState {
+  phase: 'idle' | 'checking' | 'available' | 'downloading' | 'current' | 'installing' | 'error';
+  currentVersion: string;
+  latestVersion?: string;
+  percent?: number;
+  message?: string;
+}
+export interface DesktopCapabilities {
+  platform: 'windows' | 'linux' | 'other';
+  session: 'native' | 'x11' | 'wayland' | 'unknown';
+  globalShortcut: boolean;
+  pushToTalk: boolean;
+  muteAudio: boolean;
+  automaticPaste: boolean;
+  directTyping: boolean;
+  warning?: string;
+}
 export interface Snapshot {
+  desktop: DesktopCapabilities;
   settings: Settings;
   models: ModelView[];
   downloads: DownloadState[];
@@ -108,10 +127,12 @@ export interface Snapshot {
 export interface DesktopApi {
   snapshot(): Promise<Snapshot>;
   saveSettings(settings: Partial<Preferences>): Promise<void>;
+  resetSettings(): Promise<void>;
   refreshCatalog(): Promise<void>;
   downloadModel(id: string): Promise<void>;
   cancelDownload(id: string): Promise<void>;
   deleteModel(id: string): Promise<void>;
+  deleteAllModels(): Promise<number>;
   selectModel(id: string): Promise<void>;
   openModelsFolder(): Promise<void>;
   beginRecording(): Promise<string>;
@@ -133,12 +154,12 @@ export interface DesktopApi {
   openLicenses(): Promise<void>;
   openGithub(): Promise<void>;
   openModelLicense(id: string): Promise<void>;
-  checkForUpdates(): Promise<UpdateCheckResult>;
-  openLatestRelease(): Promise<void>;
+  startUpdate(): Promise<AppUpdateState>;
   onCancel(callback: () => void): () => void;
   onShortcutCaptureEnded(callback: () => void): () => void;
   onToggle(callback: () => void): () => void;
   onHold(callback: (pressed: boolean) => void): () => void;
   onDownload(callback: (state: DownloadState) => void): () => void;
+  onUpdateState(callback: (state: AppUpdateState) => void): () => void;
 }
 export const MAX_RECORDING_SECONDS = 300;

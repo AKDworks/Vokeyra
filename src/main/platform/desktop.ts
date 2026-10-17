@@ -1,13 +1,15 @@
-import { clipboard, globalShortcut } from 'electron';
+import { host } from '../host';
 import { WindowsNative } from './windows-native';
+import { LinuxNative } from './linux-native';
 import { windowsShortcutKeys } from './windows-keys';
-import type { Preferences } from '../../shared/contracts';
+import type { DesktopCapabilities, Preferences } from '../../shared/contracts';
 
 // OS integration lives here; future native paste implementations can be added per OS.
 export interface DesktopIntegration {
-  registerShortcut(accelerator: string, callback: () => void): boolean;
-  unregisterShortcut(accelerator: string): void;
-  copyText(text: string): void;
+  capabilities(): DesktopCapabilities;
+  registerShortcut(accelerator: string, callback: () => void): Promise<boolean>;
+  unregisterShortcut(accelerator: string): Promise<void>;
+  copyText(text: string): Promise<void>;
   deliverText(text: string, settings: Preferences): Promise<void>;
   initialize(onRelease: () => void, onFailure: (error: Error) => void): Promise<void>;
   watchRelease(key: string): Promise<void>;
@@ -16,32 +18,43 @@ export interface DesktopIntegration {
   close(): Promise<void>;
 }
 const native = process.platform === 'win32' ? new WindowsNative() : undefined;
+const linux = process.platform === 'linux' ? new LinuxNative() : undefined;
+const input = native ?? linux;
 let closing = false;
+const clipboardRead = () => linux ? linux.clipboardRead(() => host<string>('clipboard:read')) : host<string>('clipboard:read');
+const clipboardWrite = (text: string) => linux ? linux.clipboardWrite(text, value => host('clipboard:write', value)) : host('clipboard:write', text);
 export const desktop: DesktopIntegration = {
-  registerShortcut: (key, callback) => globalShortcut.register(key, callback),
-  unregisterShortcut: key => globalShortcut.unregister(key),
-  copyText: text => clipboard.writeText(text),
+  capabilities: () => linux?.capabilities() ?? { platform: native ? 'windows' : 'other', session: 'native',
+    globalShortcut: !!native, pushToTalk: !!native, muteAudio: !!native, automaticPaste: !!native, directTyping: !!native },
+  registerShortcut: (key, callback) => linux && !linux.capabilities().globalShortcut ? Promise.resolve(false) : host<boolean>('shortcut:register', key),
+  unregisterShortcut: key => host('shortcut:unregister', key),
+  copyText: clipboardWrite,
   deliverText: async (text, settings) => {
-    if (!native) { clipboard.writeText(text); return; }
-    const previous = await clipboard.readText();
-    if (settings.pasteMethod === 'direct') await native.command('type', Buffer.from(text, 'utf8').toString('base64'));
+    if (!input || (linux && !linux.capabilities().automaticPaste)) { await clipboardWrite(text); return; }
+    // Direct typing and copy-only mode do not need to read the old clipboard.
+    const previous = settings.pasteMethod !== 'direct' && settings.pasteMethod !== 'none' && settings.clipboardHandling === 'restore'
+      ? await clipboardRead() : '';
+    if (settings.pasteMethod === 'direct') await input.command('type', Buffer.from(text, 'utf8').toString('base64'));
     else {
-      clipboard.writeText(text);
+      await clipboardWrite(text);
       if (settings.pasteMethod !== 'none') {
         await new Promise(resolve => setTimeout(resolve, 45));
-        await native.command('key', settings.pasteMethod);
+        await input.command('key', settings.pasteMethod);
         if (settings.clipboardHandling === 'restore') {
           await new Promise(resolve => setTimeout(resolve, 160));
-          clipboard.writeText(previous);
+          await clipboardWrite(previous);
         }
       }
     }
     if (settings.pasteMethod !== 'none' && settings.autoSubmit !== 'off') {
       await new Promise(resolve => setTimeout(resolve, 60));
-      await native.command('key', settings.autoSubmit);
+      await input.command('key', settings.autoSubmit);
     }
   },
-  initialize: async (onRelease, onFailure) => { if (native) { native.onRelease = onRelease; native.onFailure = onFailure; await native.start(); } },
+  initialize: async (onRelease, onFailure) => {
+    if (native) { native.onRelease = onRelease; native.onFailure = onFailure; await native.start(); }
+    await linux?.start();
+  },
   watchRelease: async key => { if (native) await native.command('watch', windowsShortcutKeys(key)); },
   muteAudio: async () => { if (!native) throw new Error('Отключение системного звука пока доступно только в Windows.'); await native.command('mute'); },
   restoreAudio: async () => { if (native && !closing) await native.command('restore'); },

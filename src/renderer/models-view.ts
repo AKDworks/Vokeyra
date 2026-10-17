@@ -1,6 +1,7 @@
 import type { DesktopApi, DownloadState, Model, ModelView, Snapshot } from '../shared/contracts';
 import { setIcon } from './icons';
 import { getAppLanguage, tr } from './i18n';
+import { isSherpaEngine } from '../shared/sherpa-models';
 
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 // A curated, compact menu; the catalog keeps each model's full language support.
@@ -30,7 +31,7 @@ function languageSummary(model: Model): string {
 }
 function runtimeName(model: Model): string {
   if (['gigaam-v3-e2e-ctc', 'gigaam-multilingual-ctc'].includes(model.engine)) return 'ONNX Runtime';
-  if (['gigaam-v3-e2e-rnnt', 'parakeet-tdt-0-6b-v3-int8', 'moonshine-tiny-en-int8'].includes(model.engine)) return 'sherpa-onnx';
+  if (isSherpaEngine(model.engine)) return 'sherpa-onnx';
   return model.engine;
 }
 function node<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, text = ''): HTMLElementTagNameMap[K] {

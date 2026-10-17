@@ -3,12 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ws://127.0.0.1:5173; worker-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'" />
   <link rel="icon" href="../../favicon/favicon.ico" sizes="any" />
   <title>Vokeyra</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
-<body>
+<body class="booting" aria-busy="true">
+  <div id="boot-screen" class="boot-screen" role="status" aria-label="Vokeyra">
+    <strong>Vokeyra</strong>
+    <span aria-hidden="true"></span>
+  </div>
   <div class="app">
     <aside class="sidebar">
       <div class="brand"><img id="brand-logo" alt="Vokeyra" /></div>
@@ -24,6 +27,7 @@
       <main>
         <section id="general" class="tab">
           <h2>Общее</h2>
+          <p id="platform-note" class="muted" role="status" hidden></p>
           <div class="settings-group">
             <div class="setting-row"><div class="label-with-info"><label for="hotkey">Горячая клавиша транскрипции</label><button type="button" class="info" data-icon="info" aria-label="О горячей клавише" data-help="Начинает и завершает запись голоса из любого приложения выбранным сочетанием клавиш."></button></div><div class="row-controls"><button id="hotkey" class="key-button" aria-label="Назначить горячую клавишу">Ctrl + Shift + Space</button><button id="cancel-hotkey" class="subtle" hidden>Отмена</button></div></div>
             <div class="setting-row"><div class="label-with-info"><span id="push-to-talk-label">Удерживать для записи</span><button type="button" class="info" data-icon="info" aria-label="О настройке «Удерживать для записи»" data-help="Записывает голос только пока вы удерживаете назначенную горячую клавишу."></button></div><button id="push-to-talk" type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="push-to-talk-label"><span></span></button></div>
@@ -91,6 +95,17 @@
             <div class="setting-row"><div class="label-with-info"><span id="remove-fillers-label">Удалять слова-паразиты</span><button type="button" class="info" data-icon="info" aria-label="Об удалении слов-паразитов" data-help="После распознавания удаляет отдельные междометия вроде «ээ» и «эм», сохраняя остальной текст."></button></div><button id="remove-fillers" type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="remove-fillers-label"><span></span></button></div>
             <div class="setting-row dictionary-row"><div class="label-with-info"><label for="dictionary-word">Пользовательский словарь</label><button type="button" class="info" data-icon="info" aria-label="О пользовательском словаре" data-help="Передаёт имена и специальные термины движкам, которые поддерживают подсказки распознавания."></button></div><form id="dictionary-form" class="row-controls"><input id="dictionary-word" maxlength="50" autocomplete="off" placeholder="Добавить слово"><button class="secondary" type="submit">Добавить</button></form></div>
             <div id="dictionary-list" class="dictionary-list" hidden></div>
+            <div class="setting-row replacement-editor">
+              <div class="label-with-info"><label for="replacement-from">Автозамены слов</label><button type="button" class="info" data-icon="info" aria-label="Об автозаменах" data-help="Заменяет слова и фразы после распознавания любой моделью. Регистр исходного текста не важен; написание замены сохраняется."></button></div>
+              <form id="replacement-form" class="replacement-form">
+                <input id="replacement-from" maxlength="100" autocomplete="off" placeholder="Как распознано" aria-label="Как распознано" required>
+                <span class="replacement-arrow" aria-hidden="true">→</span>
+                <input id="replacement-to" maxlength="200" autocomplete="off" placeholder="Заменить на" aria-label="Заменить на" required>
+                <button class="secondary" type="submit">Добавить</button>
+              </form>
+              <p id="replacement-error" class="replacement-error" role="alert" hidden></p>
+            </div>
+            <div id="replacement-list" class="replacement-list" hidden></div>
             <div class="setting-row"><div class="label-with-info"><span id="append-space-label">Добавить пробел</span><button type="button" class="info" data-icon="info" aria-label="О пробеле после текста" data-help="Добавляет один пробел в конец результата, чтобы следующая диктовка не склеивалась с текстом."></button></div><button id="append-space" type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="append-space-label"><span></span></button></div>
           </div>
           <h2>История</h2>
@@ -100,6 +115,13 @@
           </div>
           <h2>Экран</h2>
           <div class="settings-group"><div class="setting-row"><div class="label-with-info"><span id="window-size-label">Размер окна</span><button type="button" class="info" data-icon="info" aria-label="О размере окна" data-help="Переключает Vokeyra между компактным и увеличенным размером окна."></button></div><div class="custom-select wide-select"><button id="window-size" class="select-trigger" type="button" role="combobox" aria-labelledby="window-size-label" aria-haspopup="listbox" aria-expanded="false" aria-controls="window-size-options"><span data-value>Компактный · 780 × 600</span><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-344 240-584l56-56 184 184 184-184 56 56-240 240Z"/></svg></button><div id="window-size-options" class="select-menu" role="listbox" aria-labelledby="window-size-label" hidden></div></div></div></div>
+          <h2 class="danger-heading">Danger Zone</h2>
+          <div class="settings-group danger-zone">
+            <div class="setting-row"><div class="danger-copy"><strong>Сбросить настройки</strong><span>Вернуть параметры приложения к исходным значениям.</span></div><button id="reset-settings" class="danger" type="button">Сбросить</button></div>
+            <div class="setting-row"><div class="danger-copy"><strong>Очистить историю</strong><span>Удалить все записи и сохранённые аудиофайлы.</span></div><button id="clear-history" class="danger" type="button">Очистить</button></div>
+            <div class="setting-row"><div class="danger-copy"><strong>Удалить модели</strong><span>Удалить все скачанные модели с устройства.</span></div><button id="delete-all-models" class="danger" type="button">Удалить</button></div>
+          </div>
+          <p id="danger-status" class="danger-status" role="status" hidden></p>
         </section>
         <section id="about" class="tab" hidden>
           <h2>О программе</h2>
@@ -117,6 +139,17 @@
       <div id="notice" role="alert" hidden><span id="notice-text"></span><button id="dismiss-notice" type="button" aria-label="Закрыть сообщение" data-icon="close"></button></div>
     </div>
     <footer><span class="current-model"><span class="status-dot"></span><span id="selected-model">Модель не выбрана</span></span><span class="footer-meta"><button id="check-updates" type="button">Проверить наличие обновлений</button><span aria-hidden="true">·</span><span id="footer-version"></span></span></footer>
+  </div>
+  <div id="confirm-backdrop" class="confirm-backdrop" hidden>
+    <section id="confirm-dialog" class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message" tabindex="-1">
+      <div class="confirm-mark" data-icon="warning" aria-hidden="true"></div>
+      <h2 id="confirm-title"></h2>
+      <p id="confirm-message"></p>
+      <div class="confirm-actions">
+        <button id="confirm-cancel" class="secondary" type="button">Отмена</button>
+        <button id="confirm-accept" class="danger danger-solid" type="button"></button>
+      </div>
+    </section>
   </div>
   <script type="module" src="/main.ts"></script>
 </body>

@@ -14,7 +14,7 @@
 
 Vokeyra is a free and open-source speech-to-text application for Windows. Press a keyboard shortcut, speak, and Vokeyra inserts the result into the application you are using.
 
-Recognition runs locally on your computer. Vokeyra has no accounts, cloud transcription, telemetry, subscriptions, or paid API requirements. An internet connection is needed only to download a speech model.
+Recognition runs locally on your computer. Vokeyra has no accounts, cloud transcription, telemetry, subscriptions, or paid API requirements. An internet connection is needed for downloads and update checks.
 
 ## Download and install
 
@@ -22,6 +22,8 @@ Recognition runs locally on your computer. Vokeyra has no accounts, cloud transc
 2. Download the Windows `.exe` installer.
 3. Run the installer and launch Vokeyra.
 4. Allow microphone access when Windows asks for it.
+
+The interface uses Microsoft Edge WebView2. The installer downloads this system component if it is missing.
 
 The first release uses an unsigned installer. Windows SmartScreen may display a warning; if you downloaded the file from this repository, select **More info** and then **Run anyway**.
 
@@ -38,12 +40,13 @@ The global shortcut works while the Vokeyra window is minimized. You can also st
 ## Features
 
 - Fully local speech recognition with CPU inference.
-- 14 models for general multilingual dictation, Russian, English, European languages, and several Central Asian languages.
+- 19 models for multilingual dictation, Russian, English, European and East Asian languages, and several Central Asian languages.
 - Configurable global shortcut with toggle and hold-to-record modes.
 - Automatic text insertion, clipboard handling, and optional automatic submission.
 - Microphone and channel selection, recording sounds, and optional system audio muting.
 - Local history with audio playback, favorites, copying, deletion, and retranscription.
 - Optional punctuation, filler-word removal, custom vocabulary, and a trailing space.
+- Word and phrase replacements for every model, configured in Settings → Word replacements.
 - Russian and English interface, tray mode, autostart, and two window sizes.
 
 ## Models
@@ -66,8 +69,15 @@ Models are downloaded only when you select them and are not included in the inst
 | NVIDIA Parakeet TDT 0.6B v3 | 25 European languages | 670 MB | Accurate European-language dictation |
 | Moonshine Tiny English | English | 124 MB | Fast and compact English transcription |
 | GigaAM Multilingual CTC | RU, KZ, KY, UZ, EN | 225 MB | Russian and Central Asian languages |
+| Vosk Small Russian | RU | 27 MB | A lightweight Russian option |
+| Zipformer GigaSpeech English | EN | 74 MB | Compact English transcription |
+| Moonshine Base English | EN | 287 MB | A larger alternative to Moonshine Tiny |
+| SenseVoice Small | ZH, EN, JA, KO, YUE | 240 MB | Mandarin, Cantonese, English, Japanese, and Korean |
+| Distil-Whisper Large v3 | EN | 1,520 MB | English transcription based on Whisper Large v3 |
 
 Larger models generally need more memory and take longer to process a recording. You can install several models, switch between them, or remove unused models at any time.
+
+SenseVoice weights use the [FunASR Model License](https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE). Other model licenses are listed in the application and [Third-Party Notices](THIRD-PARTY-NOTICES.md).
 
 ## System requirements
 
@@ -77,9 +87,11 @@ Larger models generally need more memory and take longer to process a recording.
 | Processor | x64 Intel or AMD processor |
 | Hardware | A working microphone; no dedicated GPU required |
 | Internet | Required to download the application and selected models |
-| Storage | Application files plus 32 MB–1.1 GB for each installed model |
+| Storage | Application files plus 27 MB–1.52 GB for each installed model |
 
-Vokeyra currently supports Windows x64 only. macOS, Linux, and ARM builds are not available in version 0.1.0.
+Vokeyra currently supports Windows x64 only. macOS, Linux, and ARM builds are not available.
+
+Linux x64 support is being prepared for 0.3.0. Verification packages and current X11/Wayland limitations are documented in the [Linux build guide](docs/LINUX.md); Linux is not yet a tested release platform.
 
 ## Privacy and local data
 
@@ -91,7 +103,7 @@ Settings, installed models, recordings, and history are stored in the Vokeyra ap
 
 - Recognition currently uses the CPU; processing time depends on the selected model and computer.
 - The Windows installer is not yet digitally signed.
-- Application updates are installed manually from the Releases page.
+- Starting with 0.3.0, the update button downloads and installs signed application updates. Updater signatures are separate from Windows installer signing.
 
 ## License and acknowledgements
 

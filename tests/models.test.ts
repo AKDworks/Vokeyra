@@ -56,7 +56,7 @@ describe('installation lifecycle', () => {
     const manager = await setup(); await install(manager, originalBytes);
     await manager.replaceCatalog({ schemaVersion: 2, models: [] });
     expect(manager.views(() => true)).toHaveLength(1);
-    await manager.remove('whisper-tiny');
+    await expect(manager.removeAll()).resolves.toBe(1);
     expect(manager.views(() => true)).toHaveLength(0);
     await expect(stat(manager.filePath(metadata(originalBytes)))).rejects.toThrow();
   });

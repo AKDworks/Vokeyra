@@ -1,28 +1,61 @@
+import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
-import { checkForUpdates, compareVersions } from '../src/main/update';
+import { ApplicationUpdater, type UpdaterClient } from '../src/main/update';
+import type { AppUpdateState } from '../src/shared/contracts';
 
-describe('application updates', () => {
-  it('compares stable semantic versions numerically', () => {
-    expect(compareVersions('0.1.10', '0.1.9')).toBe(1);
-    expect(compareVersions('v1.0.0', '1.0.0')).toBe(0);
-    expect(compareVersions('0.2.0', '1.0.0')).toBe(-1);
+class FakeUpdater extends EventEmitter {
+  autoDownload = false;
+  autoInstallOnAppQuit = true;
+  allowPrerelease = true;
+  fullChangelog = true;
+  disableWebInstaller = false;
+  checkForUpdates = vi.fn(async () => ({}) as never);
+}
+
+describe('automatic application updates', () => {
+  it('checks without downloading prereleases or web installers', async () => {
+    const client = new FakeUpdater();
+    const states: AppUpdateState[] = [];
+    const updates = new ApplicationUpdater(client as unknown as UpdaterClient, '0.2.0', true, state => states.push(state), vi.fn());
+
+    const pending = updates.check();
+    client.emit('update-not-available', { version: '0.2.0' });
+    await pending;
+
+    expect(client.autoDownload).toBe(true);
+    expect(client.autoInstallOnAppQuit).toBe(false);
+    expect(client.allowPrerelease).toBe(false);
+    expect(client.disableWebInstaller).toBe(true);
+    expect(states.at(-1)).toMatchObject({ phase: 'current', latestVersion: '0.2.0' });
+    expect(updates.busy).toBe(false);
   });
 
-  it('reports a newer GitHub release', async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ tag_name: 'v0.1.2' })));
-    await expect(checkForUpdates('0.1.1', fetcher)).resolves.toEqual({
-      currentVersion: '0.1.1', latestVersion: '0.1.2', updateAvailable: true,
-    });
-    expect(fetcher).toHaveBeenCalledWith(expect.stringContaining('/releases/latest'), expect.objectContaining({ redirect: 'error' }));
+  it('reports download progress and starts installation', async () => {
+    const client = new FakeUpdater();
+    const install = vi.fn(async () => {});
+    const states: AppUpdateState[] = [];
+    const updates = new ApplicationUpdater(client as unknown as UpdaterClient, '0.2.0', true, state => states.push(state), install);
+
+    await updates.check();
+    client.emit('update-available', { version: '0.2.1' });
+    client.emit('download-progress', { percent: 42.4 });
+    client.emit('update-downloaded', { version: '0.2.1' });
+    await vi.waitFor(() => expect(install).toHaveBeenCalledOnce());
+
+    expect(states).toContainEqual({ phase: 'downloading', currentVersion: '0.2.0', latestVersion: '0.2.1', percent: 42 });
+    expect(states.at(-1)).toMatchObject({ phase: 'installing', latestVersion: '0.2.1' });
   });
 
-  it('does not offer an older or equal release', async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ tag_name: 'v0.1.0' })));
-    await expect(checkForUpdates('0.1.1', fetcher)).resolves.toMatchObject({ updateAvailable: false });
-  });
+  it('allows retrying after an update error', async () => {
+    const client = new FakeUpdater();
+    client.checkForUpdates.mockRejectedValueOnce(new Error('fetch failed'));
+    const states: AppUpdateState[] = [];
+    const updates = new ApplicationUpdater(client as unknown as UpdaterClient, '0.2.0', true, state => states.push(state), vi.fn());
 
-  it('rejects malformed and failed responses', async () => {
-    await expect(checkForUpdates('0.1.1', vi.fn().mockResolvedValue(new Response('{}')))).rejects.toThrow('некорректный ответ');
-    await expect(checkForUpdates('0.1.1', vi.fn().mockResolvedValue(new Response(null, { status: 503 })))).rejects.toThrow('HTTP 503');
+    await expect(updates.check()).rejects.toThrow('Не удалось скачать обновление');
+    expect(states.at(-1)).toMatchObject({ phase: 'error' });
+    expect(updates.busy).toBe(false);
+    await updates.check();
+    expect(client.checkForUpdates).toHaveBeenCalledTimes(2);
   });
 });

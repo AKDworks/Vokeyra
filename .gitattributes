@@ -1,0 +1,2 @@
+# Preserve the formatting of upstream license texts verbatim.
+resources/*-LICENSE.txt -whitespace

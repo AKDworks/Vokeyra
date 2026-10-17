@@ -6,9 +6,10 @@ export const defaultPreferences: Preferences = {
   hotkey: 'Control+Shift+Space', language: 'auto', pushToTalk: false,
   microphoneId: 'default', inputChannel: 'all', muteWhileRecording: false,
   audioFeedback: false, outputDeviceId: 'default', feedbackVolume: 80,
-  hideOnStartup: false, launchAtStartup: false, showTrayIcon: true, overlayMode: 'realtime', indicatorPosition: 'bottom', modelUnloadDelay: '5m', windowSize: 'compact',
+  hideOnStartup: false, launchAtStartup: true, showTrayIcon: true, overlayMode: 'realtime', indicatorPosition: 'bottom', modelUnloadDelay: '5m', windowSize: 'compact',
   pasteMethod: 'ctrl-v', clipboardHandling: 'restore', autoSubmit: 'off',
   voiceActivityDetection: true, punctuation: true, removeFillerWords: false, customVocabulary: [], appendSpace: false,
+  textReplacements: [],
   historyLimit: 5, historyRetention: 'limit',
 };
 
@@ -42,6 +43,19 @@ export function validatePreferences(value: unknown, base: Preferences = defaultP
   if (!Array.isArray(result.customVocabulary) || result.customVocabulary.length > 100 || result.customVocabulary.some(word =>
     typeof word !== 'string' || !word.trim() || word.length > 50)) throw new Error('Некорректный пользовательский словарь.');
   result.customVocabulary = [...new Set(result.customVocabulary.map(word => word.trim()))];
+  if (!Array.isArray(result.textReplacements) || result.textReplacements.length > 100) throw new Error('Допустимо не более 100 автозамен.');
+  const sources = new Set<string>();
+  result.textReplacements = result.textReplacements.map(rule => {
+    if (!rule || typeof rule !== 'object' || typeof rule.from !== 'string' || typeof rule.to !== 'string'
+      || !rule.from.trim() || !rule.to.trim() || rule.from.length > 100 || rule.to.length > 200
+      || /[\u0000-\u001f\u007f]/u.test(rule.from + rule.to)) throw new Error('Укажите исходное слово и замену: до 100 и 200 символов.');
+    const from = rule.from.trim().normalize('NFC').replace(/[^\S\r\n]+/gu, ' ');
+    const to = rule.to.trim().normalize('NFC');
+    const key = from.toLowerCase();
+    if (sources.has(key)) throw new Error('Для этого слова уже есть автозамена.');
+    sources.add(key);
+    return { from, to };
+  });
   if (!('historyRetention' in input) && typeof input.autoDeleteHistory === 'boolean') result.historyRetention = input.autoDeleteHistory ? 'limit' : 'never';
   if (!Number.isInteger(result.historyLimit) || result.historyLimit < 1 || result.historyLimit > 100) throw new Error('Размер истории должен быть от 1 до 100 записей.');
   if (!['never', 'limit', '3d', '2w', '3m'].includes(result.historyRetention)) throw new Error('Некорректный срок хранения истории.');

@@ -1,0 +1,16 @@
+{
+  "bundle": {
+    "targets": ["deb", "appimage"],
+    "category": "Utility",
+    "shortDescription": "Private, local speech to text",
+    "resources": { "../dist/desktop-linux/": "desktop/" },
+    "linux": {
+      "deb": {
+        "depends": ["xdotool", "wl-clipboard", "libgomp1", "libstdc++6", "gstreamer1.0-plugins-base", "gstreamer1.0-plugins-good", "gstreamer1.0-plugins-bad", "gstreamer1.0-pulseaudio"],
+        "recommends": ["libayatana-appindicator3-1"],
+        "section": "utils"
+      },
+      "appimage": { "bundleMediaFramework": true }
+    }
+  }
+}

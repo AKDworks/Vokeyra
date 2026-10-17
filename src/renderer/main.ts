@@ -1,4 +1,5 @@
-import type { DownloadState, Preferences, Snapshot } from '../shared/contracts';
+import './desktop-bridge';
+import type { AppUpdateState, DownloadState, Preferences, Snapshot } from '../shared/contracts';
 import { MicrophoneRecorder } from './recorder';
 import { acceleratorFromEvent, prettyHotkey } from '../shared/hotkey';
 import { CustomSelect } from './custom-select';
@@ -9,7 +10,7 @@ import { ModelsView } from './models-view';
 import brandLogo from '../../logo/vokeyra-logo.png?url';
 import { SoundSettings } from './sound-settings';
 import { playFeedback } from './audio-feedback';
-import { setAppLanguage } from './i18n';
+import { onAppLanguageChange, setAppLanguage, tr } from './i18n';
 
 (document.getElementById('brand-logo') as HTMLImageElement).src = brandLogo;
 setupIcons();
@@ -28,6 +29,9 @@ let initialized = false;
 let capturingHotkey = false;
 let savingHotkey = false;
 let heldSession = false;
+let updateInProgress = false;
+let maintenanceInProgress = false;
+let confirmationOpen = false;
 const downloads = new Map<string, DownloadState>();
 const appLanguageSelect = new CustomSelect(el<HTMLButtonElement>('app-language'), el('app-language-options'), [
   { value: 'ru', label: 'Русский' }, { value: 'en', label: 'English' },
@@ -130,24 +134,43 @@ function showTab(name: string): void {
 }
 document.querySelectorAll<HTMLButtonElement>('nav button').forEach(button => button.addEventListener('click', () => showTab(button.dataset.tab!)));
 function updateControls(): void {
-  const busy = mode !== 'idle';
+  const recordingBusy = mode !== 'idle';
+  const busy = recordingBusy || updateInProgress || maintenanceInProgress;
   historyView.setBusy(busy || capturingHotkey);
   appLanguageSelect.setDisabled(busy || capturingHotkey);
   languageSelect.setDisabled(busy || capturingHotkey);
   soundSettings.setBusy(busy || capturingHotkey);
   settingSelectList.forEach(select => select.setDisabled(busy || capturingHotkey));
-  el('cancel-recording').hidden = !busy;
-  el<HTMLButtonElement>('record').disabled = capturingHotkey || mode === 'starting' || mode === 'transcribing';
+  el('cancel-recording').hidden = !recordingBusy;
+  el<HTMLButtonElement>('record').disabled = updateInProgress || maintenanceInProgress || capturingHotkey || mode === 'starting' || mode === 'transcribing';
   el('record').classList.toggle('recording', mode === 'recording');
   el('record').setAttribute('aria-label', mode === 'recording' ? 'Остановить запись' : 'Начать запись');
   el('record').textContent = mode === 'recording' ? 'Завершить' : mode === 'transcribing' ? 'Обработка…' : 'Начать запись';
   el('record-status').textContent = { idle: 'Готово к записи', starting: 'Подключаем микрофон…', recording: 'Идёт запись', transcribing: 'Распознаём на устройстве…' }[mode];
-  document.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement>('#advanced input, #advanced button, #language, #hotkey').forEach(item => { item.disabled = busy || capturingHotkey; });
+  document.querySelectorAll<HTMLInputElement | HTMLButtonElement | HTMLSelectElement>('#advanced input, #advanced button, #language, #hotkey').forEach(item => {
+    item.disabled = busy || capturingHotkey || item.dataset.unavailable === 'true';
+  });
+  if (snapshot) {
+    el<HTMLButtonElement>('hotkey').disabled ||= !snapshot.desktop.globalShortcut;
+    el<HTMLButtonElement>('push-to-talk').disabled ||= !snapshot.desktop.pushToTalk;
+    el<HTMLButtonElement>('mute-recording').disabled ||= !snapshot.desktop.muteAudio;
+    settingSelects.pasteMethod.setDisabled(busy || capturingHotkey || !snapshot.desktop.automaticPaste);
+    settingSelects.clipboardHandling.setDisabled(busy || capturingHotkey || !snapshot.desktop.automaticPaste);
+    settingSelects.autoSubmit.setDisabled(busy || capturingHotkey || !snapshot.desktop.automaticPaste);
+  }
+  updateButton.disabled = updateInProgress || maintenanceInProgress;
   if (snapshot) renderModels();
 }
 async function refresh(fillSettings = false): Promise<void> {
   snapshot = await api.snapshot();
   setAppLanguage(snapshot.settings.appLanguage);
+  el('platform-note').textContent = tr(snapshot.desktop.warning ?? '');
+  el('platform-note').hidden = !snapshot.desktop.warning;
+  el('push-to-talk').dataset.unavailable = String(!snapshot.desktop.pushToTalk);
+  el('mute-recording').dataset.unavailable = String(!snapshot.desktop.muteAudio);
+  for (const [id, available] of [['hotkey', snapshot.desktop.globalShortcut], ['push-to-talk', snapshot.desktop.pushToTalk], ['mute-recording', snapshot.desktop.muteAudio]] as const) {
+    el(id).closest('.setting-row')?.classList.toggle('unavailable', !available);
+  }
   soundSettings.setValue(snapshot.settings);
   downloads.clear(); snapshot.downloads.forEach(state => downloads.set(state.id, state));
   if (!initialized || fillSettings) {
@@ -158,6 +181,7 @@ async function refresh(fillSettings = false): Promise<void> {
     settingSelects.modelUnloadDelay.setValue(snapshot.settings.modelUnloadDelay);
     settingSelects.windowSize.setValue(snapshot.settings.windowSize);
     settingSelects.pasteMethod.setValue(snapshot.settings.pasteMethod);
+    if (!snapshot.desktop.automaticPaste) settingSelects.pasteMethod.setValue('none');
     settingSelects.clipboardHandling.setValue(snapshot.settings.clipboardHandling);
     settingSelects.autoSubmit.setValue(snapshot.settings.autoSubmit);
     settingSelects.historyRetention.setOptions([
@@ -168,6 +192,7 @@ async function refresh(fillSettings = false): Promise<void> {
     el<HTMLInputElement>('history-limit').value = String(snapshot.settings.historyLimit);
     for (const [id, key] of switchSettings) el(id).setAttribute('aria-checked', String(snapshot.settings[key]));
     renderDictionary();
+    renderReplacements();
   }
   if (!capturingHotkey) el('hotkey').textContent = prettyHotkey(snapshot.settings.hotkey);
   el('data-path').textContent = snapshot.dataPath;
@@ -176,18 +201,20 @@ async function refresh(fillSettings = false): Promise<void> {
   const selected = snapshot.models.find(item => item.model.id === snapshot.settings.selectedModelId && item.installed);
   el('selected-model').textContent = selected ? `${selected.installed!.model.name} · ${snapshot.settings.language === 'auto' ? 'Авто' : snapshot.settings.language.toUpperCase()}` : 'Модель не выбрана';
   if (!initialized) {
-    if (!snapshot.hotkeyRegistered) notice('Горячая клавиша занята. Выберите другую на вкладке «Главное».', true);
+    if (snapshot.desktop.warning) notice(snapshot.desktop.warning);
+    else if (!snapshot.hotkeyRegistered) notice('Горячая клавиша занята. Выберите другую на вкладке «Главное».', true);
     else if (!selected) notice('Скачайте модель во вкладке «Модели» — она выберется автоматически.');
     else if (!snapshot.engineReady) notice('Встроенный движок модели недоступен. Переустановите Vokeyra.', true);
   }
   initialized = true;
+  renderDangerAvailability();
   renderModels();
   renderHistory();
 }
 function renderHistory(): void { historyView.render(snapshot.history); }
-function renderModels(): void { if (snapshot) modelsView.update(snapshot, downloads, mode !== 'idle' || capturingHotkey); }
+function renderModels(): void { if (snapshot) modelsView.update(snapshot, downloads, mode !== 'idle' || capturingHotkey || updateInProgress || maintenanceInProgress); }
 async function toggleRecording(fromHold = false): Promise<void> {
-  if (capturingHotkey || mode === 'starting' || mode === 'transcribing') return;
+  if (updateInProgress || maintenanceInProgress || confirmationOpen || capturingHotkey || mode === 'starting' || mode === 'transcribing') return;
   const token = ++generation;
   try {
     if (mode === 'idle') {
@@ -267,18 +294,140 @@ el('open-data').onclick = () => { void action(() => api.openDataFolder()); };
 el('open-licenses').onclick = () => { void action(() => api.openLicenses()); };
 el('open-github').onclick = () => { void action(() => api.openGithub()); };
 el('open-recordings').onclick = () => { void action(() => api.openRecordingsFolder()); };
-let updateAvailable = false;
 const updateButton = el<HTMLButtonElement>('check-updates');
+let updateState: AppUpdateState = { phase: 'idle', currentVersion: '' };
+function renderUpdate(state: AppUpdateState): void {
+  updateState = state;
+  updateInProgress = ['checking', 'available', 'downloading', 'installing'].includes(state.phase);
+  updateButton.disabled = updateInProgress;
+  updateButton.classList.toggle('update-available', ['available', 'downloading', 'installing'].includes(state.phase));
+  const labels: Record<AppUpdateState['phase'], string> = {
+    idle: 'Проверить наличие обновлений',
+    checking: 'Проверяем обновления…',
+    available: state.latestVersion ? `Найдена версия ${state.latestVersion}…` : 'Обновление найдено…',
+    downloading: `Скачивание обновления ${state.percent ?? 0}%`,
+    current: 'Обновление не требуется',
+    installing: state.latestVersion ? `Устанавливаем версию ${state.latestVersion}…` : 'Устанавливаем обновление…',
+    error: 'Не удалось обновить · Повторить',
+  };
+  updateButton.textContent = tr(labels[state.phase]);
+  updateControls();
+  if (state.phase === 'error' && state.message) notice(state.message, true);
+}
 updateButton.onclick = () => {
-  if (updateAvailable) { void api.openLatestRelease().catch(report); return; }
-  updateButton.disabled = true; updateButton.textContent = 'Проверяем…';
-  void api.checkForUpdates().then(result => {
-    updateAvailable = result.updateAvailable;
-    updateButton.classList.toggle('update-available', updateAvailable);
-    updateButton.textContent = updateAvailable ? `Доступна версия ${result.latestVersion} · Скачать` : 'Обновление не требуется';
-  }).catch(() => { updateButton.textContent = 'Не удалось проверить · Повторить'; })
-    .finally(() => { updateButton.disabled = false; });
+  renderUpdate({ phase: 'checking', currentVersion: snapshot.appVersion });
+  void api.startUpdate().then(renderUpdate).catch(error => {
+    if (updateState.phase === 'checking') {
+      renderUpdate({ phase: 'error', currentVersion: snapshot.appVersion, message: error instanceof Error ? error.message : String(error) });
+    }
+  });
 };
+api.onUpdateState(renderUpdate);
+onAppLanguageChange(() => renderUpdate(updateState));
+
+const confirmBackdrop = el('confirm-backdrop');
+const confirmPanel = el('confirm-dialog');
+const confirmCancel = el<HTMLButtonElement>('confirm-cancel');
+const confirmAccept = el<HTMLButtonElement>('confirm-accept');
+const appShell = document.querySelector<HTMLElement>('.app')!;
+let finishConfirmation: ((confirmed: boolean) => void) | undefined;
+let confirmationFocus: HTMLElement | null = null;
+
+function closeConfirmation(confirmed: boolean): void {
+  if (confirmBackdrop.hidden) return;
+  confirmBackdrop.hidden = true;
+  confirmationOpen = false;
+  appShell.inert = false;
+  const finish = finishConfirmation; finishConfirmation = undefined;
+  const focus = confirmationFocus; confirmationFocus = null;
+  finish?.(confirmed);
+  focus?.focus({ preventScroll: true });
+}
+function confirmAction(title: string, message: string, acceptLabel: string): Promise<boolean> {
+  if (finishConfirmation) closeConfirmation(false);
+  confirmationFocus = document.activeElement as HTMLElement | null;
+  el('confirm-title').textContent = tr(title);
+  el('confirm-message').textContent = tr(message);
+  confirmAccept.textContent = tr(acceptLabel);
+  confirmBackdrop.hidden = false;
+  confirmationOpen = true;
+  appShell.inert = true;
+  confirmCancel.focus();
+  return new Promise(resolve => { finishConfirmation = resolve; });
+}
+confirmCancel.onclick = () => closeConfirmation(false);
+confirmAccept.onclick = () => closeConfirmation(true);
+confirmBackdrop.onpointerdown = event => { if (event.target === confirmBackdrop) closeConfirmation(false); };
+confirmPanel.onkeydown = event => {
+  if (event.key === 'Escape') { event.preventDefault(); closeConfirmation(false); return; }
+  if (event.key !== 'Tab') return;
+  const controls = [confirmCancel, confirmAccept].filter(button => !button.disabled);
+  const current = controls.indexOf(document.activeElement as HTMLButtonElement);
+  const next = event.shiftKey ? (current <= 0 ? controls.length - 1 : current - 1) : (current + 1) % controls.length;
+  event.preventDefault(); controls[next]?.focus();
+};
+
+function renderDangerAvailability(): void {
+  const historyUnavailable = !snapshot.history.length;
+  const modelDownloadActive = snapshot.downloads.some(item => ['downloading', 'verifying'].includes(item.phase));
+  const modelsUnavailable = !snapshot.models.some(item => item.installed) || modelDownloadActive;
+  for (const [id, unavailable] of [['clear-history', historyUnavailable], ['delete-all-models', modelsUnavailable]] as const) {
+    const button = el<HTMLButtonElement>(id);
+    button.dataset.unavailable = String(unavailable);
+    button.disabled = unavailable || mode !== 'idle' || capturingHotkey || updateInProgress || maintenanceInProgress;
+  }
+}
+function showDangerStatus(message: string, error = false): void {
+  const status = el('danger-status');
+  status.textContent = tr(message);
+  status.classList.toggle('error', error);
+  status.hidden = !message;
+}
+async function runDanger(options: { title: string; message: string; accept: string; success: string },
+  operation: () => Promise<unknown>, successOverride?: () => { message: string; error?: boolean }): Promise<void> {
+  showDangerStatus('');
+  if (!await confirmAction(options.title, options.message, options.accept)) return;
+  maintenanceInProgress = true; updateControls();
+  try {
+    historyView.stop();
+    modelsView.close();
+    await operation();
+    await refresh(true);
+    const result = successOverride?.() ?? { message: options.success };
+    showDangerStatus(result.message, !!result.error);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    showDangerStatus(message.replace(/^Error invoking remote method '[^']+': Error: /, ''), true);
+  } finally {
+    maintenanceInProgress = false;
+    renderDangerAvailability();
+    updateControls();
+  }
+}
+el('reset-settings').onclick = () => {
+  void runDanger({
+    title: 'Сбросить все настройки?',
+    message: 'Все параметры приложения, включая горячую клавишу и выбранную модель, вернутся к исходным значениям. История и скачанные модели сохранятся.',
+    accept: 'Сбросить', success: 'Настройки сброшены.',
+  }, () => api.resetSettings(), () => snapshot.hotkeyRegistered
+    ? { message: 'Настройки сброшены.' }
+    : { message: 'Настройки сброшены, но горячая клавиша по умолчанию занята другим приложением.', error: true });
+};
+el('clear-history').onclick = () => {
+  void runDanger({
+    title: 'Очистить всю историю?',
+    message: 'Все записи истории и сохранённые аудиофайлы будут удалены без возможности восстановления.',
+    accept: 'Очистить', success: 'История очищена.',
+  }, () => api.clearHistory());
+};
+el('delete-all-models').onclick = () => {
+  void runDanger({
+    title: 'Удалить все скачанные модели?',
+    message: 'Все скачанные модели будут удалены с устройства. Для распознавания речи модель потребуется скачать заново.',
+    accept: 'Удалить', success: 'Скачанные модели удалены.',
+  }, () => api.deleteAllModels());
+};
+
 async function savePreferences(patch: Partial<Preferences>): Promise<void> {
   await api.saveSettings(patch);
   await refresh(true);
@@ -300,6 +449,39 @@ el<HTMLFormElement>('dictionary-form').onsubmit = event => {
   if (!word || snapshot.settings.customVocabulary.includes(word)) return;
   void savePreferences({ customVocabulary: [...snapshot.settings.customVocabulary, word] }).then(() => { input.value = ''; }).catch(report);
 };
+function replacementError(error?: unknown): void {
+  const message = el('replacement-error');
+  message.textContent = error ? tr(error instanceof Error ? error.message : String(error)) : '';
+  message.hidden = !error;
+}
+function renderReplacements(): void {
+  const list = el('replacement-list');
+  list.replaceChildren();
+  for (const [index, rule] of snapshot.settings.textReplacements.entries()) {
+    const row = document.createElement('div'); row.className = 'replacement-item';
+    const text = document.createElement('span'); text.className = 'replacement-text'; text.textContent = `${rule.from} → ${rule.to}`;
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button';
+    remove.setAttribute('aria-label', tr('Удалить автозамену')); setIcon(remove, 'close');
+    remove.onclick = () => {
+      remove.disabled = true; replacementError();
+      void savePreferences({ textReplacements: snapshot.settings.textReplacements.filter((_, item) => item !== index) })
+        .catch(error => { replacementError(error); remove.disabled = false; });
+    };
+    row.append(text, remove); list.append(row);
+  }
+  list.hidden = !list.childElementCount;
+}
+el<HTMLFormElement>('replacement-form').onsubmit = event => {
+  event.preventDefault(); replacementError();
+  const from = el<HTMLInputElement>('replacement-from'), to = el<HTMLInputElement>('replacement-to');
+  if (!from.value.trim() || !to.value.trim()) { replacementError('Укажите исходное слово и замену: до 100 и 200 символов.'); return; }
+  const submit = el<HTMLFormElement>('replacement-form').querySelector<HTMLButtonElement>('button')!;
+  submit.disabled = true;
+  void savePreferences({ textReplacements: [...snapshot.settings.textReplacements, { from: from.value, to: to.value }] })
+    .then(() => { from.value = ''; to.value = ''; from.focus(); })
+    .catch(replacementError).finally(() => updateControls());
+};
+for (const id of ['replacement-from', 'replacement-to']) el(id).addEventListener('input', () => replacementError());
 el<HTMLInputElement>('history-limit').onchange = () => {
   const input = el<HTMLInputElement>('history-limit');
   const value = Math.max(1, Math.min(100, Math.round(Number(input.value) || snapshot.settings.historyLimit)));
@@ -337,5 +519,23 @@ document.addEventListener('keydown', event => {
   void savePreferences({ hotkey: key }).then(() => notice('Горячая клавиша сохранена.')).catch(report).finally(() => { savingHotkey = false; });
 }, true);
 window.addEventListener('beforeunload', () => { historyView.stop(); void recorder?.dispose(); void api.cancelRecording(); });
-if (!api) notice('Откройте приложение через npm run dev. Обычная вкладка браузера не имеет доступа к Electron.', true);
-else void refresh().then(() => soundSettings.refreshDevices(true)).catch(report);
+if (!api) {
+  el('boot-screen').hidden = true;
+  document.body.classList.remove('booting');
+  document.body.removeAttribute('aria-busy');
+  notice('Откройте приложение через npm run dev. Обычная вкладка браузера не имеет доступа к Vokeyra.', true);
+} else void refresh().then(() => {
+  el('boot-screen').hidden = true;
+  document.body.classList.remove('booting');
+  document.body.removeAttribute('aria-busy');
+  return soundSettings.refreshDevices(true);
+}).catch(error => {
+  el('boot-screen').hidden = true;
+  document.body.classList.remove('booting');
+  document.body.removeAttribute('aria-busy');
+  report(error);
+});
+window.addEventListener('vokeyra-service-error', event => {
+  report((event as CustomEvent<string>).detail);
+  el('notice').hidden = false;
+});

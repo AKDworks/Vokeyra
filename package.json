@@ -1,6 +1,6 @@
 {
   "name": "vokeyra",
-  "version": "0.1.1",
+  "version": "0.3.0",
   "description": "Private, local speech to text for your desktop",
   "license": "MIT",
   "author": "AKDworks",
@@ -14,122 +14,35 @@
   },
   "private": true,
   "type": "module",
-  "main": "dist/main/index.cjs",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
-    "dev": "node scripts/dev.mjs",
+    "dev": "node scripts/tauri.mjs dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "npm run typecheck && node scripts/build.mjs",
-    "start": "electron .",
-    "pack:win": "npm run build && node scripts/package-win.mjs --dir",
-    "dist:win": "npm run build && node scripts/package-win.mjs --installer",
-    "smoke": "node scripts/smoke.mjs",
-    "smoke:dev": "node scripts/smoke.mjs --dev"
+    "build": "npm run typecheck && node scripts/build-tauri.mjs",
+    "start": "node scripts/tauri.mjs dev",
+    "tauri": "node scripts/tauri.mjs",
+    "pack:win": "node scripts/package-tauri.mjs --no-bundle",
+    "dist:win": "node scripts/package-tauri.mjs --bundles nsis",
+    "pack:linux": "node scripts/package-tauri.mjs --no-bundle",
+    "dist:linux": "node scripts/package-tauri.mjs --bundles deb,appimage",
+    "dist:linux:unsigned": "node scripts/package-tauri.mjs --unsigned --bundles deb,appimage",
+    "smoke": "node scripts/smoke-tauri.mjs",
+    "smoke:service": "node scripts/smoke-service.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@tauri-apps/cli": "^2.12.3",
     "@types/node": "^24.0.0",
-    "electron": "44.3.0",
-    "electron-builder": "26.15.3",
     "esbuild": "0.28.2",
     "typescript": "7.0.2",
     "vite": "8.3.0",
     "vitest": "5.0.0"
   },
-  "build": {
-    "appId": "org.vokeyra.desktop",
-    "productName": "Vokeyra",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "package.json",
-      "LICENSE"
-    ],
-    "extraResources": [
-      {
-        "from": "resources/models.json",
-        "to": "models.json"
-      },
-      {
-        "from": "resources/whisper",
-        "to": "whisper",
-        "filter": [
-          "whisper-cli.exe",
-          "whisper.dll",
-          "ggml.dll",
-          "ggml-base.dll",
-          "ggml-cpu-*.dll"
-        ]
-      },
-      {
-        "from": "favicon/favicon.ico",
-        "to": "app-icon.ico"
-      },
-      {
-        "from": "dist/native",
-        "to": "native",
-        "filter": [
-          "*.exe"
-        ]
-      },
-      {
-        "from": "resources/GigaAM-LICENSE.txt",
-        "to": "licenses/GigaAM-LICENSE.txt"
-      },
-      {
-        "from": "resources/ONNX-Runtime-LICENSE.txt",
-        "to": "licenses/ONNX-Runtime-LICENSE.txt"
-      },
-      {
-        "from": "resources/Whisper.cpp-LICENSE.txt",
-        "to": "licenses/Whisper.cpp-LICENSE.txt"
-      },
-      {
-        "from": "resources/Sherpa-ONNX-LICENSE.txt",
-        "to": "licenses/Sherpa-ONNX-LICENSE.txt"
-      },
-      {
-        "from": "THIRD-PARTY-NOTICES.md",
-        "to": "licenses/THIRD-PARTY-NOTICES.md"
-      }
-    ],
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "favicon/android-chrome-512x512.png",
-      "signExecutable": false,
-      "files": [
-        "dist/**/*",
-        "package.json",
-        "LICENSE",
-        "!node_modules/onnxruntime-node/bin/napi-v6/darwin/**/*",
-        "!node_modules/onnxruntime-node/bin/napi-v6/linux/**/*",
-        "!node_modules/onnxruntime-node/bin/napi-v6/win32/arm64/**/*"
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true
-    },
-    "asarUnpack": [
-      "node_modules/onnxruntime-node/**",
-      "node_modules/onnxruntime-common/**",
-      "node_modules/sherpa-onnx-node/**",
-      "node_modules/sherpa-onnx-win-x64/**"
-    ],
-    "electronLanguages": [
-      "ru",
-      "en-US"
-    ]
-  },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
     "onnxruntime-node": "1.22.0",
     "sherpa-onnx-node": "^1.13.8",
     "tar": "^7.5.22"

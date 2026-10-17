@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
-import { app } from 'electron';
+import { config } from '../host';
 
 export class WindowsNative {
   private child?: ChildProcessWithoutNullStreams;
@@ -12,7 +12,7 @@ export class WindowsNative {
 
   async start(): Promise<void> {
     if (this.child) return;
-    const file = app.isPackaged ? join(process.resourcesPath, 'native/Vokeyra.Desktop.exe') : join(app.getAppPath(), 'dist/native/Vokeyra.Desktop.exe');
+    const file = join(config.resourcePath, 'native', 'Vokeyra.Desktop.exe');
     const child = spawn(file, [String(process.pid)], { windowsHide: true, stdio: 'pipe' });
     this.child = child;
     const fail = (error: Error) => {

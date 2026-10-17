@@ -1,0 +1,47 @@
+name: Linux x64 build
+
+# Verification only. It cannot publish commits, tags or releases.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['codex/linux-0.3.0']
+
+permissions:
+  contents: read
+
+jobs:
+  linux-x64:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.18.0'
+          cache: npm
+      - name: Install Linux build and media dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config curl wget file \
+            libwebkit2gtk-4.1-dev libssl-dev libxdo-dev libayatana-appindicator3-dev \
+            librsvg2-dev patchelf libfuse2 xdotool xclip wl-clipboard xvfb xterm \
+            gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-pulseaudio
+      - name: Set up Rust
+        run: rustup toolchain install stable --profile minimal --no-self-update
+      - run: npm ci
+      - run: npm test
+      - name: Build Debian and AppImage verification packages
+        env:
+          CARGO_BUILD_JOBS: '2'
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: npm run dist:linux:unsigned
+      - name: Check packaged runtimes and X11 paste integration
+        run: xvfb-run -a node scripts/smoke-linux.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Vokeyra-linux-x64-verification
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage

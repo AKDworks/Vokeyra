@@ -63,7 +63,7 @@ export class SoundSettings {
   }
   private renderDisabled(): void {
     const disabled = this.busy || this.saving || this.scanning || !this.preferences;
-    Object.keys(this.toggles).forEach(id => { el<HTMLButtonElement>(id).disabled = disabled; });
+    Object.keys(this.toggles).forEach(id => { el<HTMLButtonElement>(id).disabled = disabled || el(id).dataset.unavailable === 'true'; });
     this.selects.microphone!.setDisabled(disabled);
     this.selects['input-channel']!.setDisabled(disabled);
     const feedbackDisabled = disabled || !this.preferences?.audioFeedback;

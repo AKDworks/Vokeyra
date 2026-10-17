@@ -206,6 +206,12 @@ export class ModelManager {
     this.installed.delete(id);
     this.downloads.delete(id);
   }
+  async removeAll(): Promise<number> {
+    if (this.active.size) throw new Error('Сначала отмените загрузку моделей.');
+    const ids = [...this.installed.keys()];
+    for (const id of ids) await this.remove(id);
+    return ids.length;
+  }
   async shutdown(): Promise<void> {
     for (const controller of this.active.values()) controller.abort();
     await Promise.allSettled([...this.tasks]);

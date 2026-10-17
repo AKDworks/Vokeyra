@@ -1512,6 +1512,272 @@
           "sha256": "4d130287892e1099fedfb3f93c4b4cf8a263151158801680b28977d1be4133f4"
         }
       ]
+    },
+    {
+      "id": "moonshine-base-en-int8",
+      "name": "Moonshine Base English",
+      "developer": "Moonshine AI",
+      "family": "Moonshine",
+      "languages": [
+        "en"
+      ],
+      "speed": "Быстрая",
+      "quality": "Повышенное",
+      "speedScore": 4,
+      "qualityScore": 4,
+      "description": "Английская диктовка: более крупный вариант Moonshine Tiny.",
+      "license": "MIT",
+      "licenseUrl": "https://github.com/moonshine-ai/moonshine/blob/main/LICENSE",
+      "engine": "moonshine-base-en-int8",
+      "version": "052b079-int8",
+      "recommended": false,
+      "quantization": "INT8",
+      "capabilities": {
+        "streaming": false,
+        "translation": false,
+        "languageDetection": false,
+        "punctuation": false
+      },
+      "sourceUrl": "https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-base-en-int8/tree/052b0798ad1bf046a140fdd4efcd9426530fa3f5",
+      "entrypoint": "preprocess.onnx",
+      "artifacts": [
+        {
+          "filename": "preprocess.onnx",
+          "format": "file",
+          "sizeBytes": 14077290,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-base-en-int8/resolve/052b0798ad1bf046a140fdd4efcd9426530fa3f5/preprocess.onnx",
+          "sha256": "ffa630d395c5ccf76f5d4954be5b882df76aaf6491519ec01fd82ea7a3819fb2"
+        },
+        {
+          "filename": "encode.int8.onnx",
+          "format": "file",
+          "sizeBytes": 50311494,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-base-en-int8/resolve/052b0798ad1bf046a140fdd4efcd9426530fa3f5/encode.int8.onnx",
+          "sha256": "7e38770f776f2e5583a53b052936005df2ba5c833d7e09c2a5fd796b94bf73e2"
+        },
+        {
+          "filename": "uncached_decode.int8.onnx",
+          "format": "file",
+          "sizeBytes": 122120451,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-base-en-int8/resolve/052b0798ad1bf046a140fdd4efcd9426530fa3f5/uncached_decode.int8.onnx",
+          "sha256": "c01f4b35093bcac20d352d23a75a539e772964579f9d024a90e5e6f09cae9987"
+        },
+        {
+          "filename": "cached_decode.int8.onnx",
+          "format": "file",
+          "sizeBytes": 99983837,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-base-en-int8/resolve/052b0798ad1bf046a140fdd4efcd9426530fa3f5/cached_decode.int8.onnx",
+          "sha256": "2db74e51cedf64a8b1be3c8192e0bb5e4923af0e90bd9e87f8e8771873f8ea03"
+        },
+        {
+          "filename": "tokens.txt",
+          "format": "file",
+          "sizeBytes": 436688,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-moonshine-base-en-int8/resolve/052b0798ad1bf046a140fdd4efcd9426530fa3f5/tokens.txt",
+          "sha256": "1165c2aeb9f72f457a83be2d459a09054f27490acd9b41bd43794dfd25e296ea"
+        }
+      ]
+    },
+    {
+      "id": "sensevoice-small-int8",
+      "name": "SenseVoice Small",
+      "developer": "Alibaba / FunAudioLLM",
+      "family": "SenseVoice",
+      "languages": [
+        "zh",
+        "en",
+        "ja",
+        "ko",
+        "yue"
+      ],
+      "speed": "Быстрая",
+      "quality": "Повышенное",
+      "speedScore": 4,
+      "qualityScore": 4,
+      "description": "Китайский, английский, японский, корейский и кантонский с пунктуацией.",
+      "license": "FunASR Model License",
+      "licenseUrl": "https://github.com/modelscope/FunASR/blob/main/MODEL_LICENSE",
+      "engine": "sensevoice-small-int8",
+      "version": "2365bae-int8",
+      "recommended": false,
+      "quantization": "INT8",
+      "capabilities": {
+        "streaming": false,
+        "translation": false,
+        "languageDetection": true,
+        "punctuation": true
+      },
+      "sourceUrl": "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/tree/2365baeacb507f821a0c8120fcee3d484dba7a07",
+      "entrypoint": "model.int8.onnx",
+      "artifacts": [
+        {
+          "filename": "model.int8.onnx",
+          "format": "file",
+          "sizeBytes": 239233841,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/2365baeacb507f821a0c8120fcee3d484dba7a07/model.int8.onnx",
+          "sha256": "c71f0ce00bec95b07744e116345e33d8cbbe08cef896382cf907bf4b51a2cd51"
+        },
+        {
+          "filename": "tokens.txt",
+          "format": "file",
+          "sizeBytes": 315894,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/2365baeacb507f821a0c8120fcee3d484dba7a07/tokens.txt",
+          "sha256": "f449eb28dc567533d7fa59be34e2abca8784f771850c78a47fb731a31429a1dc"
+        }
+      ]
+    },
+    {
+      "id": "vosk-small-ru-int8",
+      "name": "Vosk Small Russian",
+      "developer": "Alpha Cephei",
+      "family": "Zipformer",
+      "languages": [
+        "ru"
+      ],
+      "speed": "Очень быстрая",
+      "quality": "Базовое",
+      "speedScore": 5,
+      "qualityScore": 2,
+      "description": "Компактная русская модель для компьютеров с ограниченными ресурсами.",
+      "license": "Apache 2.0",
+      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "engine": "vosk-small-ru-int8",
+      "version": "4d68c40-int8",
+      "recommended": false,
+      "quantization": "INT8",
+      "capabilities": {
+        "streaming": false,
+        "translation": false,
+        "languageDetection": false,
+        "punctuation": false
+      },
+      "sourceUrl": "https://huggingface.co/alphacep/vosk-model-small-ru/tree/4d68c4017bcfa44e2a79581f7933339e916a35da",
+      "entrypoint": "encoder.int8.onnx",
+      "artifacts": [
+        {
+          "filename": "encoder.int8.onnx",
+          "format": "file",
+          "sizeBytes": 25090964,
+          "url": "https://huggingface.co/alphacep/vosk-model-small-ru/resolve/4d68c4017bcfa44e2a79581f7933339e916a35da/am/encoder.int8.onnx",
+          "sha256": "75653125bf3621d86a2b140ffd84a1c3b7610fc8cd49f2b6d70cf5786be0d085"
+        },
+        {
+          "filename": "decoder.int8.onnx",
+          "format": "file",
+          "sizeBytes": 1307950,
+          "url": "https://huggingface.co/alphacep/vosk-model-small-ru/resolve/4d68c4017bcfa44e2a79581f7933339e916a35da/am/decoder.int8.onnx",
+          "sha256": "435752764fb93c3e3e8d2537b9d008700114c7e126461e7808de30ef4aed4696"
+        },
+        {
+          "filename": "joiner.int8.onnx",
+          "format": "file",
+          "sizeBytes": 259572,
+          "url": "https://huggingface.co/alphacep/vosk-model-small-ru/resolve/4d68c4017bcfa44e2a79581f7933339e916a35da/am/joiner.int8.onnx",
+          "sha256": "a93e0afc2c82e94d366157b4a8b5f4cba6973ddea8f36ac94010b430be7823f1"
+        },
+        {
+          "filename": "tokens.txt",
+          "format": "file",
+          "sizeBytes": 6388,
+          "url": "https://huggingface.co/alphacep/vosk-model-small-ru/resolve/4d68c4017bcfa44e2a79581f7933339e916a35da/lang/tokens.txt",
+          "sha256": "93bbbc0bae6b78c0bbb743d4aa9fded3bb5ff3aac5f0200e3a769a5a05e0fdf6"
+        }
+      ]
+    },
+    {
+      "id": "zipformer-gigaspeech-en-int8",
+      "name": "Zipformer GigaSpeech English",
+      "developer": "k2-fsa",
+      "family": "Zipformer",
+      "languages": [
+        "en"
+      ],
+      "speed": "Очень быстрая",
+      "quality": "Повышенное",
+      "speedScore": 5,
+      "qualityScore": 4,
+      "description": "Компактная английская модель, обученная на GigaSpeech.",
+      "license": "Apache 2.0",
+      "licenseUrl": "https://www.apache.org/licenses/LICENSE-2.0",
+      "engine": "zipformer-gigaspeech-en-int8",
+      "version": "a2a62c5-int8",
+      "recommended": false,
+      "quantization": "INT8",
+      "capabilities": {
+        "streaming": false,
+        "translation": false,
+        "languageDetection": false,
+        "punctuation": false
+      },
+      "sourceUrl": "https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-gigaspeech-2023-12-12/tree/a2a62c509c99b336186e16e5bbd19d3828954875",
+      "entrypoint": "encoder-epoch-30-avg-1.int8.onnx",
+      "artifacts": [
+        {
+          "filename": "encoder-epoch-30-avg-1.int8.onnx",
+          "format": "file",
+          "sizeBytes": 72850738,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-gigaspeech-2023-12-12/resolve/a2a62c509c99b336186e16e5bbd19d3828954875/encoder-epoch-30-avg-1.int8.onnx",
+          "sha256": "d3eff4b1bd747bd781a47966795988539227d05638524b0313f26d3a166962d7"
+        },
+        {
+          "filename": "decoder-epoch-30-avg-1.int8.onnx",
+          "format": "file",
+          "sizeBytes": 540688,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-gigaspeech-2023-12-12/resolve/a2a62c509c99b336186e16e5bbd19d3828954875/decoder-epoch-30-avg-1.int8.onnx",
+          "sha256": "2b0580feb757696fa929922670b7126aaee609630349a1809fd5a2aee926d56e"
+        },
+        {
+          "filename": "joiner-epoch-30-avg-1.int8.onnx",
+          "format": "file",
+          "sizeBytes": 259417,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-gigaspeech-2023-12-12/resolve/a2a62c509c99b336186e16e5bbd19d3828954875/joiner-epoch-30-avg-1.int8.onnx",
+          "sha256": "80160e45cca71dd52f6b0a6d3d12be18126f5308b2d4ba03f001300fea377c64"
+        },
+        {
+          "filename": "tokens.txt",
+          "format": "file",
+          "sizeBytes": 5020,
+          "url": "https://huggingface.co/csukuangfj/sherpa-onnx-zipformer-gigaspeech-2023-12-12/resolve/a2a62c509c99b336186e16e5bbd19d3828954875/tokens.txt",
+          "sha256": "0ef7d736bf4de3ef947292e4b119ef13f6808cd5f3aec225a843a7135ac1c2ce"
+        }
+      ]
+    },
+    {
+      "id": "distil-whisper-large-v3",
+      "name": "Distil-Whisper Large v3",
+      "developer": "Hugging Face",
+      "family": "Distil-Whisper",
+      "languages": [
+        "en"
+      ],
+      "speed": "Умеренная",
+      "quality": "Очень высокое",
+      "speedScore": 3,
+      "qualityScore": 5,
+      "description": "Английская дистиллированная модель на основе OpenAI Whisper Large v3.",
+      "license": "MIT",
+      "licenseUrl": "https://github.com/huggingface/distil-whisper/blob/main/LICENSE",
+      "engine": "whisper.cpp",
+      "version": "0d78dd9-f16",
+      "recommended": false,
+      "quantization": "F16",
+      "capabilities": {
+        "streaming": false,
+        "translation": false,
+        "languageDetection": false,
+        "punctuation": true
+      },
+      "sourceUrl": "https://huggingface.co/distil-whisper/distil-large-v3-ggml/tree/0d78dd96ed9fc152325f63b53788fec3b43de031",
+      "entrypoint": "ggml-distil-large-v3.bin",
+      "artifacts": [
+        {
+          "filename": "ggml-distil-large-v3.bin",
+          "format": "file",
+          "sizeBytes": 1519521155,
+          "url": "https://huggingface.co/distil-whisper/distil-large-v3-ggml/resolve/0d78dd96ed9fc152325f63b53788fec3b43de031/ggml-distil-large-v3.bin?download=true",
+          "sha256": "2883a11b90fb10ed592d826edeaee7d2929bf1ab985109fe9e1e7b4d2b69a298"
+        }
+      ]
     }
   ]
 }

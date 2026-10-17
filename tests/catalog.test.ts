@@ -23,6 +23,12 @@ describe('catalog trust boundary', () => {
     expect(new Set(models.get('parakeet-tdt-0-6b-v3-int8')?.languages).size).toBe(25);
     expect(models.get('moonshine-tiny-en-int8')?.languages).toEqual(['en']);
     expect(models.get('gigaam-multilingual-ctc')?.languages).toEqual(['ru', 'kk', 'ky', 'uz', 'en']);
+    expect(models.get('vosk-small-ru-int8')?.languages).toEqual(['ru']);
+    for (const id of ['moonshine-base-en-int8', 'zipformer-gigaspeech-en-int8', 'distil-whisper-large-v3']) {
+      expect(models.get(id)?.languages).toEqual(['en']);
+    }
+    expect(models.get('sensevoice-small-int8')?.languages).toEqual(['zh', 'en', 'ja', 'ko', 'yue']);
+    expect(models.get('sensevoice-small-int8')?.license).toBe('FunASR Model License');
     expect([...models.values()].filter(model => model.recommended)).toHaveLength(5);
     for (const model of models.values()) {
       expect(model.sourceUrl).toMatch(/^https:\/\//);

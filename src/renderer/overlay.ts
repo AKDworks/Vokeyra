@@ -1,3 +1,4 @@
+import './desktop-bridge';
 import type { RecordingIndicator } from '../shared/contracts';
 function render(state: RecordingIndicator): void {
   const english = state.appLanguage === 'en';

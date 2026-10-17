@@ -1,0 +1,84 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Vokeyra",
+  "version": "0.3.0",
+  "identifier": "org.vokeyra.desktop",
+  "build": {
+    "beforeDevCommand": "node scripts/tauri-dev.mjs",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist/renderer"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Vokeyra",
+        "theme": "Dark",
+        "width": 780,
+        "height": 600,
+        "resizable": false,
+        "maximizable": false,
+        "visible": false,
+        "backgroundColor": "#292a29",
+        "useHttpsScheme": true
+      },
+      {
+        "label": "overlay",
+        "title": "Vokeyra",
+        "url": "overlay.html",
+        "theme": "Dark",
+        "width": 248,
+        "height": 58,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "resizable": false,
+        "maximizable": false,
+        "visible": false,
+        "focus": false,
+        "focusable": false,
+        "skipTaskbar": true,
+        "alwaysOnTop": true,
+        "useHttpsScheme": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost; worker-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'",
+      "devCsp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost https://ipc.localhost ws://127.0.0.1:1420; worker-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "../favicon/favicon.ico",
+      "../favicon/android-chrome-512x512.png"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": true,
+        "languages": [
+          "English",
+          "Russian"
+        ],
+        "installerHooks": "installer-hooks.nsh"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/AKDworks/Vokeyra/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg1MkUwRjJEMUNBOTE0QzAKUldUQUZLa2NMUTh1aGVxQWVhbVpsRUJROVhTUHdlQVI3Y1BjMjYzRTVzVkxKN21iTjEvMUh6c1gK"
+    }
+  }
+}

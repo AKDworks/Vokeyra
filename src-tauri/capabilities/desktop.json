@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop",
+  "description": "Local UI event subscriptions; privileged operations are checked in Rust.",
+  "windows": ["main", "overlay"],
+  "permissions": ["core:default"]
+}

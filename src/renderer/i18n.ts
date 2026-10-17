@@ -3,6 +3,11 @@ import type { Settings } from '../shared/contracts';
 export type AppLanguage = Settings['appLanguage'];
 
 const ruToEn: Record<string, string> = {
+  'В Wayland запись запускается кнопкой. Результат копируется в буфер обмена.': 'On Wayland, start recording with the button. The result is copied to the clipboard.',
+  'Для автоматической вставки в Linux установите xdotool.': 'Install xdotool to enable automatic insertion on Linux.',
+  'Для буфера обмена Wayland установите wl-clipboard.': 'Install wl-clipboard to use the Wayland clipboard.',
+  'Удержание клавиши в Linux пока доступно только в X11.': 'Push-to-talk on Linux currently requires X11.',
+  'Автоматическая вставка недоступна. Текст сохранён в истории.': 'Automatic insertion is unavailable. The text is saved in history.',
   'Разделы приложения': 'Application sections', 'Главное': 'General', 'Модели': 'Models', 'История': 'History',
   'Настройки': 'Settings', 'О программе': 'About', 'Общее': 'General', 'Звук': 'Sound',
   'Горячая клавиша транскрипции': 'Transcription shortcut', 'Удерживать для записи': 'Hold to record',
@@ -31,13 +36,25 @@ const ruToEn: Record<string, string> = {
   'Определение голосовой активности': 'Voice activity detection', 'Расставлять знаки препинания': 'Add punctuation',
   'Удалять слова-паразиты': 'Remove filler words', 'Пользовательский словарь': 'Custom vocabulary',
   'Добавить слово': 'Add a word', 'Добавить': 'Add', 'Добавить пробел': 'Append a space',
+  'Автозамены слов': 'Word replacements', 'Как распознано': 'Recognized as', 'Заменить на': 'Replace with',
+  'Об автозаменах': 'About word replacements', 'Удалить автозамену': 'Delete replacement',
+  'Заменяет слова и фразы после распознавания любой моделью. Регистр исходного текста не важен; написание замены сохраняется.': 'Replaces words and phrases after transcription with any model. Matching ignores case; replacement spelling is preserved.',
+  'Допустимо не более 100 автозамен.': 'You can save up to 100 replacements.',
+  'Укажите исходное слово и замену: до 100 и 200 символов.': 'Enter the original text and replacement: up to 100 and 200 characters.',
+  'Для этого слова уже есть автозамена.': 'A replacement for this text already exists.',
   'Размер истории': 'History size', 'записей': 'entries', 'Автоматическое удаление записей': 'Automatic history cleanup',
   'Через 3 дня': 'After 3 days', 'Через 2 недели': 'After 2 weeks', 'Через 3 месяца': 'After 3 months',
   'Экран': 'Display', 'Размер окна': 'Window size', 'Компактный · 780 × 600': 'Compact · 780 × 600',
+  'Сбросить настройки': 'Reset settings', 'Вернуть параметры приложения к исходным значениям.': 'Restore the original application settings.',
+  'Очистить историю': 'Clear history', 'Удалить все записи и сохранённые аудиофайлы.': 'Delete all entries and saved audio files.',
+  'Удалить модели': 'Delete models', 'Удалить все скачанные модели с устройства.': 'Delete all downloaded models from this device.',
+  'Сбросить': 'Reset', 'Очистить': 'Clear', 'Отмена': 'Cancel',
   'Средний · 920 × 700': 'Medium · 920 × 700', 'Язык приложения': 'Application language',
   'Русский': 'Russian', 'Версия': 'Version', 'Поддержка развития': 'Support development', 'Скоро': 'Coming soon',
   'Лицензии сторонних компонентов': 'Third-party licenses', 'Исходный код': 'Source code', 'Открыть GitHub': 'Open GitHub', 'Каталог данных приложения': 'Application data folder',
   'Открыть': 'Open', 'Проверить наличие обновлений': 'Check for updates', 'Проверяем…': 'Checking…',
+  'Проверяем обновления…': 'Checking for updates…', 'Обновление найдено…': 'Update found…',
+  'Устанавливаем обновление…': 'Installing update…', 'Не удалось обновить · Повторить': 'Update failed · Retry',
   'Обновление не требуется': 'Up to date', 'Не удалось проверить · Повторить': 'Could not check · Retry',
   'Модель не выбрана': 'No model selected', 'Авто': 'Auto',
   'Записей пока нет. Начните с горячей клавиши.': 'No recordings yet. Start with the keyboard shortcut.',
@@ -73,6 +90,14 @@ const ruToEn: Record<string, string> = {
   'Подключаем микрофон…': 'Connecting microphone…', 'Идёт запись': 'Recording', 'Обработка…': 'Processing…',
   'Распознаём на устройстве…': 'Transcribing on device…', 'Нажмите горячую клавишу…': 'Press a keyboard shortcut…',
   'Запись отменена.': 'Recording cancelled.', 'Текст скопирован.': 'Text copied.',
+  'Сбросить все настройки?': 'Reset all settings?',
+  'Все параметры приложения, включая горячую клавишу и выбранную модель, вернутся к исходным значениям. История и скачанные модели сохранятся.': 'All application settings, including the shortcut and selected model, will return to their defaults. History and downloaded models will be kept.',
+  'Очистить всю историю?': 'Clear all history?',
+  'Все записи истории и сохранённые аудиофайлы будут удалены без возможности восстановления.': 'All history entries and saved audio files will be permanently deleted.',
+  'Удалить все скачанные модели?': 'Delete all downloaded models?',
+  'Все скачанные модели будут удалены с устройства. Для распознавания речи модель потребуется скачать заново.': 'All downloaded models will be removed from this device. You will need to download a model again to transcribe speech.',
+  'Настройки сброшены.': 'Settings reset.', 'История очищена.': 'History cleared.', 'Скачанные модели удалены.': 'Downloaded models deleted.',
+  'Настройки сброшены, но горячая клавиша по умолчанию занята другим приложением.': 'Settings were reset, but the default shortcut is used by another application.',
   'Язык сохранён.': 'Language saved.', 'Горячая клавиша сохранена.': 'Keyboard shortcut saved.',
   'Не удалось скопировать.': 'Could not copy.', 'Не удалось сохранить.': 'Could not save.',
   'Не удалось распознать. Проверьте модель и движок.': 'Could not transcribe. Check the model and engine.',
@@ -151,6 +176,9 @@ function translateCore(value: string): string {
       .replace(/^Выход (\d+)$/, 'Output $1')
       .replace(/ · Авто$/, ' · Auto')
       .replace(/^Доступна версия (.+) · Скачать$/, 'Version $1 available · Download')
+      .replace(/^Найдена версия (.+)…$/, 'Version $1 found…')
+      .replace(/^Скачивание обновления (\\d+)%$/, 'Downloading update $1%')
+      .replace(/^Устанавливаем версию (.+)…$/, 'Installing version $1…')
       .replace(/^Лицензия: (.+)$/, 'License: $1')
       .replace(/^Открыть лицензию (.+) для (.+)$/, 'Open $1 license for $2')
       .replace(/^(.+), активная модель$/, '$1, active model')
@@ -169,6 +197,9 @@ function translateCore(value: string): string {
     .replace(/^Output (\d+)$/, 'Выход $1')
     .replace(/ · Auto$/, ' · Авто')
     .replace(/^Version (.+) available · Download$/, 'Доступна версия $1 · Скачать')
+    .replace(/^Version (.+) found…$/, 'Найдена версия $1…')
+    .replace(/^Downloading update (\\d+)%$/, 'Скачивание обновления $1%')
+    .replace(/^Installing version (.+)…$/, 'Устанавливаем версию $1…')
     .replace(/^License: (.+)$/, 'Лицензия: $1')
     .replace(/^Open (.+) license for (.+)$/, 'Открыть лицензию $1 для $2')
     .replace(/^(.+), active model$/, '$1, активная модель')
@@ -184,7 +215,7 @@ export function tr(value: string): string {
 
 function excluded(node: Node): boolean {
   const parent = node.nodeType === Node.ELEMENT_NODE ? node as Element : node.parentElement;
-  return !!parent?.closest('.history-text, .dictionary-chip, #transcript, #data-path');
+  return !!parent?.closest('.history-text, .dictionary-chip, .replacement-text, #transcript, #data-path');
 }
 
 function localizeNode(root: Node): void {

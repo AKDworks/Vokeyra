@@ -88,32 +88,51 @@ function append(previous: string, next: string): string {
   }
   return `${previous} ${next}`.trim();
 }
-async function main(): Promise<string> {
-  const engine = process.argv[2], modelPath = process.argv[3], wavPath = process.argv[4];
-  if (!modelPath || !wavPath) throw new Error('Не переданы файлы GigaAM.');
-  const multilingual = engine === 'gigaam-multilingual-ctc';
-  const tokens = parseVocabulary(multilingual ? await readFile(join(dirname(modelPath), 'multilingual_vocab.txt'), 'utf8') : vocabulary);
+const engine = process.argv[2], modelPath = process.argv[3];
+if (!modelPath) throw new Error('Не передана модель GigaAM.');
+const multilingual = engine === 'gigaam-multilingual-ctc';
+ort.env.logLevel = 'error';
+const tokensPromise = multilingual
+  ? readFile(join(dirname(modelPath), 'multilingual_vocab.txt'), 'utf8').then(parseVocabulary)
+  : Promise.resolve(parseVocabulary(vocabulary));
+const sessionPromise = ort.InferenceSession.create(modelPath, {
+  executionProviders: ['cpu'],
+  intraOpNumThreads: Math.min(4, availableParallelism()),
+  interOpNumThreads: 1,
+  graphOptimizationLevel: 'all',
+});
+
+async function transcribe(wavPath: string): Promise<string> {
+  const [tokens, session] = await Promise.all([tokensPromise, sessionPromise]);
   const blank = multilingual ? 70 : 256;
   const wav = Uint8Array.from(await readFile(wavPath)).buffer; validateWav(wav);
   const pcm = new DataView(wav);
   const samples = Float32Array.from({ length: (wav.byteLength - 44) / 2 }, (_, i) => pcm.getInt16(44 + i * 2, true) / 32768);
-  ort.env.logLevel = 'error';
-  const session = await ort.InferenceSession.create(modelPath, { executionProviders: ['cpu'], intraOpNumThreads: Math.min(4, availableParallelism()), interOpNumThreads: 1, graphOptimizationLevel: 'all' });
-  try {
-    let text = '';
-    for (let start = 0; start < samples.length;) {
-      const end = cutPoint(samples, start);
-      const feature = features(samples.subarray(start, end));
-      const result = await session.run({ features: new ort.Tensor('float32', feature.values, [1, 64, feature.frames]),
-        feature_lengths: new ort.Tensor('int64', BigInt64Array.of(BigInt(feature.frames)), [1]) });
-      if (!result.log_probs) throw new Error('Нет результата GigaAM.');
-      text = append(text, decode(result.log_probs, feature.frames, tokens, blank, !multilingual));
-      if (end === samples.length) break;
-      start = end - 5600; // Context overlap at a quiet boundary; merge repeated boundary words.
-    }
-    return text;
-  } finally { await session.release(); }
+  let text = '';
+  for (let start = 0; start < samples.length;) {
+    const end = cutPoint(samples, start);
+    const feature = features(samples.subarray(start, end));
+    const result = await session.run({ features: new ort.Tensor('float32', feature.values, [1, 64, feature.frames]),
+      feature_lengths: new ort.Tensor('int64', BigInt64Array.of(BigInt(feature.frames)), [1]) });
+    if (!result.log_probs) throw new Error('Нет результата GigaAM.');
+    text = append(text, decode(result.log_probs, feature.frames, tokens, blank, !multilingual));
+    if (end === samples.length) break;
+    start = Math.max(start + 1, end - 5600);
+  }
+  return text;
 }
-const send = (message: { text?: string; error?: string }) => process.parentPort
-  ? process.parentPort.postMessage(message) : console.log(JSON.stringify(message));
-void main().then(text => send({ text }), error => send({ error: `GigaAM: ${error instanceof Error ? error.message : String(error)}` }));
+
+if (!process.send) throw new Error('Модель запущена без служебного канала.');
+const port = { on: process.on.bind(process), postMessage: (message: unknown) => process.send!(message as object) };
+let queue = Promise.resolve();
+port.on('message', event => {
+  const value = event && typeof event === 'object' && 'data' in event ? (event as { data: unknown }).data : event;
+  if (!value || typeof value !== 'object') return;
+  const message = value as { id?: unknown; wavPath?: unknown };
+  if (typeof message.id !== 'number' || typeof message.wavPath !== 'string') return;
+  const id = message.id, wavPath = message.wavPath;
+  queue = queue.then(async () => {
+    try { port.postMessage({ id, text: await transcribe(wavPath) }); }
+    catch (error) { port.postMessage({ id, error: `GigaAM: ${error instanceof Error ? error.message : String(error)}` }); }
+  });
+});
