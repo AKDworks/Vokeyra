@@ -7,7 +7,8 @@ import { createServer } from 'node:net';
 import { setTimeout as delay } from 'node:timers/promises';
 
 if (process.platform !== 'linux' || process.arch !== 'x64') throw new Error('This check needs Linux x64.');
-const run = promisify(execFile);
+const exec = promisify(execFile);
+const run = (file, args, options = {}) => exec(file, args, { timeout: 20000, ...options });
 const { version } = JSON.parse(await readFile('package.json', 'utf8'));
 const runtime = JSON.parse(await readFile('.tmp/linux-runtime-report.json', 'utf8'));
 const temporary = await mkdtemp(resolve('.tmp/linux-ui-'));
@@ -21,6 +22,7 @@ const applications = [
   ['appimage', resolve('src-tauri/target/release/bundle/appimage', appimages[0])],
 ];
 const speech = join(temporary, 'speech.wav');
+console.log('Preparing synthetic speech and PulseAudio microphone.');
 await run('espeak', ['-v', 'en-us', '-s', '140', '-w', speech, 'Hello world. This is a test of local speech recognition.']);
 await run('pulseaudio', ['--start', '--exit-idle-time=-1', `--log-target=file:${join(temporary, 'pulseaudio.log')}`]);
 const modules = [];
@@ -45,6 +47,7 @@ try {
   playback.catch(error => { playbackError = error; });
   try {
     for (const [format, application] of applications) {
+      console.log(`Starting ${format} application: ${application}`);
       const profile = join(temporary, format);
       await mkdir(profile, { recursive: true });
       await cp(join(runtime.modelsPath, 'whisper-tiny-q5-1'), join(profile, 'models/whisper-tiny-q5-1'), { recursive: true });
@@ -63,11 +66,11 @@ try {
         env: { ...process.env, TAURI_AUTOMATION: 'true', TAURI_WEBVIEW_AUTOMATION: 'true',
           VOKEYRA_TEST_DATA: profile, XDG_CONFIG_HOME: join(profile, 'config'), XDG_DATA_HOME: join(profile, 'data'), XDG_CACHE_HOME: join(profile, 'cache'),
           XDG_SESSION_TYPE: 'x11', GDK_BACKEND: 'x11', PULSE_SOURCE: 'VokeyraTestMic', PULSE_SINK: 'VokeyraTestOutput', APPIMAGE_EXTRACT_AND_RUN: '1' },
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['ignore', 'pipe', 'pipe'], detached: true,
       });
       let diagnostics = '', session;
-      for (const output of [driver.stdout, driver.stderr]) output.on('data', data => { diagnostics = (diagnostics + data).slice(-24000); });
-      async function request(method, path, body, timeout = 90000) {
+      for (const output of [driver.stdout, driver.stderr]) output.on('data', data => { diagnostics = (diagnostics + data).slice(-24000); console.error(`[${format}] ${String(data).trim()}`); });
+      async function request(method, path, body, timeout = 30000) {
         const response = await fetch(`http://127.0.0.1:${port}${path}`, {
           method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeout),
         });
@@ -96,8 +99,10 @@ try {
           if (driver.exitCode !== null) throw new Error(`WebKitWebDriver exited: ${diagnostics}`);
           return fetch(`http://127.0.0.1:${port}/status`).then(response => response.ok).catch(() => false);
         }, 'WebKitWebDriver startup');
-        session = (await request('POST', '/session', { capabilities: { alwaysMatch: { 'webkitgtk:browserOptions': { binary: application, args: [] } } } })).sessionId;
-        await request('POST', `/session/${session}/timeouts`, { script: 90000 });
+        console.log(`${format}: creating WebDriver session.`);
+        session = (await request('POST', '/session', { capabilities: { alwaysMatch: { 'webkitgtk:browserOptions': { binary: application, args: [] } } } }, 45000)).sessionId;
+        console.log(`${format}: WebDriver session connected.`);
+        await request('POST', `/session/${session}/timeouts`, { script: 25000 });
         const windows = await request('GET', `/session/${session}/window/handles`);
         let main;
         for (const handle of windows) {
@@ -111,6 +116,7 @@ try {
         assert.equal(snapshot.desktop.platform, 'linux'); assert.equal(snapshot.desktop.session, 'x11');
         assert.equal(snapshot.hotkeyRegistered, true); assert.equal(snapshot.engineReady, true);
         assert.equal(await execute(() => document.getElementById('footer-version').textContent), `Vokeyra ${version}`);
+        console.log(`${format}: interface and catalog ready; requesting microphone.`);
         const input = await execute(async () => {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
           const track = stream.getAudioTracks()[0]; const result = { label: track.label, readyState: track.readyState, secure: window.isSecureContext, audioWorklet: !!window.AudioWorkletNode };
@@ -118,6 +124,7 @@ try {
         });
         assert.equal(input.readyState, 'live'); assert.equal(input.secure, true); assert.equal(input.audioWorklet, true);
         assert.match(input.label, /Vokeyra/i, 'Use the actual PulseAudio test microphone, not a WebKit mock.');
+        console.log(`${format}: microphone available: ${input.label}; starting recording.`);
         await execute(() => document.getElementById('record').click());
         await until(() => execute(() => /Recording|Идёт запись/.test(document.getElementById('record-status').textContent)), 'recording start');
         await delay(6500);
@@ -144,13 +151,16 @@ try {
         console.log(`${format}: installed application → PulseAudio microphone → AudioWorklet → Whisper → history passed: ${recorded.text}`);
       } catch (error) {
         if (session) {
-          await writeFile(join(reports, `${format}-failure.png`), Buffer.from(await request('GET', `/session/${session}/screenshot`).catch(() => ''), 'base64'));
+          await writeFile(join(reports, `${format}-failure.png`), Buffer.from(await request('GET', `/session/${session}/screenshot`, undefined, 5000).catch(() => ''), 'base64'));
           console.error(await execute(() => ({ status: document.getElementById('record-status')?.textContent, notice: document.getElementById('notice-text')?.textContent, url: location.href })).catch(() => null));
         }
         throw error;
       } finally {
-        if (session) await request('DELETE', `/session/${session}`).catch(() => {});
-        driver.kill();
+        if (session) await request('DELETE', `/session/${session}`, undefined, 5000).catch(() => {});
+        // Kill only the isolated driver's process group, including any app left
+        // behind by a WebKit automation timeout; release its shortcut and pipes.
+        try { process.kill(-driver.pid, 'SIGTERM'); } catch { driver.kill(); }
+        driver.stdout.destroy(); driver.stderr.destroy(); driver.unref();
         await writeFile(join(reports, `${format}-driver.log`), diagnostics);
       }
     }
