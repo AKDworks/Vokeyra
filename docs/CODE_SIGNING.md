@@ -16,7 +16,7 @@ Signing is intended for Vokeyra's own application executable, its Windows deskto
 
 ## Build and approval
 
-The source includes a [Windows verification workflow](../.github/workflows/windows-build.yml) and a [Linux verification workflow](../.github/workflows/linux-build.yml). They build test artifacts without release publication or signing credentials. The new Windows workflow still needs its first GitHub run.
+The source includes a [Windows verification workflow](../.github/workflows/windows-build.yml) and a [Linux verification workflow](../.github/workflows/linux-build.yml). They build test artifacts without release publication or signing credentials. Both passed for commit `8560e2c`: [Windows](https://github.com/AKDworks/Vokeyra/actions/runs/39040820303), [Linux](https://github.com/AKDworks/Vokeyra/actions/runs/39040820359). The Linux run also checks the packaged application and virtual microphone. These verification runs do not constitute approval by a signing provider.
 
 Each public release and each future Authenticode signing request requires approval from the project owner. Multi-factor authentication for the source repository and signing account, final provider configuration, and review of artifact metadata are onboarding requirements to complete before signing is enabled.
 

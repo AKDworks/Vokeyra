@@ -1,6 +1,6 @@
 # Vokeyra 0.3.0
 
-Draft for review. Linux packages still require manual installation and microphone testing before publication. The Windows installer does not yet have an Authenticode signature.
+Draft for review. Linux packages passed automated installation/launch, interface, virtual-microphone recording and transcription checks on Ubuntu 22.04 X11. Physical devices and native Wayland remain unverified; Linux support is experimental. The Windows installer does not yet have an Authenticode signature.
 
 ---
 
@@ -8,7 +8,7 @@ Draft for review. Linux packages still require manual installation and microphon
 
 - Migrated from Electron to Tauri, with a new application foundation and more compact packaging. Speech recognition still runs locally.
 - Five new models: Vosk Small Russian, Zipformer GigaSpeech English, Moonshine Base English, SenseVoice Small, and Distil-Whisper Large v3. There are now 19 models available.
-- Preliminary Linux x64 support with `.deb` and `.AppImage` packages. X11 supports global shortcuts and automatic insertion; Wayland supports button recording and manual clipboard insertion.
+- Experimental Linux x64 support with `.deb` and `.AppImage` packages. X11 supports global shortcuts and automatic insertion; Wayland is designed for button recording and manual clipboard insertion and has not yet been tested on a native Wayland desktop.
 - Download and install application updates directly from Vokeyra.
 - Word and phrase replacements across all models.
 - Reset settings, clear history, and remove downloaded models with confirmation.
