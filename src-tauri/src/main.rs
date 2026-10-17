@@ -1,6 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod microphone;
+#[cfg(windows)]
+mod desktop_worker;
 
 use serde_json::{json, Value};
 use std::{
@@ -109,8 +111,8 @@ async fn service_request(
     {
         return Err("Недоверенный источник запроса.".into());
     }
-    if method == "microphone:reset-permission" {
-        return microphone::reset_permission(window)
+    if method == "microphone:grant-permission" {
+        return microphone::grant_permission(window)
             .await
             .map(|()| Value::Null);
     }
@@ -486,7 +488,7 @@ fn start_service(
     };
     let data = dunce::simplified(&data).to_path_buf();
     std::fs::create_dir_all(&data)?;
-    let config = json!({"dataPath": data, "resourcePath": desktop, "version": app.package_info().version.to_string(),
+    let config = json!({"dataPath": data, "resourcePath": desktop, "executablePath": dunce::simplified(&std::env::current_exe()?), "version": app.package_info().version.to_string(),
         "packaged": !cfg!(debug_assertions), "hidden": std::env::args().any(|arg| arg == "--hidden")});
     let mut command = Command::new(desktop.join(if cfg!(windows) { "node.exe" } else { "node" }));
     command
@@ -589,6 +591,8 @@ fn read_service(
 }
 
 fn main() {
+    #[cfg(windows)]
+    if let Some(code) = desktop_worker::run_if_requested() { std::process::exit(code); }
     let builder = tauri::Builder::default()
         .on_permission_request(|webview, kind| {
             use tauri::webview::{PermissionKind, PermissionResponse};

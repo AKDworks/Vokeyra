@@ -2,7 +2,7 @@ import { createInterface } from 'node:readline';
 import { EventEmitter } from 'node:events';
 
 // The service talks only to its parent over inherited pipes, never a TCP port.
-export interface HostConfig { dataPath: string; resourcePath: string; version: string; packaged: boolean; hidden: boolean }
+export interface HostConfig { dataPath: string; resourcePath: string; executablePath?: string; version: string; packaged: boolean; hidden: boolean }
 export const config: HostConfig = JSON.parse(process.env.VOKEYRA_HOST_CONFIG || '{}');
 if (!config.dataPath || !config.resourcePath || !config.version) throw new Error('Missing desktop host configuration.');
 const output = process.stdout.write.bind(process.stdout);

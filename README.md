@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  Local, private voice typing for Windows.
+  Local, private voice typing for Windows and Linux.
 </p>
 
 <p align="center">
@@ -12,7 +12,7 @@
 
 # Vokeyra
 
-Vokeyra is a free and open-source speech-to-text application for Windows. Press a keyboard shortcut, speak, and Vokeyra inserts the result into the application you are using.
+Vokeyra is a free and open-source speech-to-text application for Windows and Linux. Press a keyboard shortcut, speak, and Vokeyra inserts the result into the application you are using.
 
 Recognition runs locally on your computer. Vokeyra has no accounts, cloud transcription, telemetry, subscriptions, or paid API requirements. An internet connection is needed for downloads and update checks.
 
@@ -25,7 +25,11 @@ Recognition runs locally on your computer. Vokeyra has no accounts, cloud transc
 
 The interface uses Microsoft Edge WebView2. The installer downloads this system component if it is missing.
 
-The first release uses an unsigned installer. Windows SmartScreen may display a warning; if you downloaded the file from this repository, select **More info** and then **Run anyway**.
+The Windows installer is not yet digitally signed. Windows SmartScreen may display a warning.
+
+For Linux x64, download the `.deb` package for Ubuntu/Debian or the `.AppImage` for other distributions. Linux support is experimental; see the [Linux guide](docs/LINUX.md) for requirements and limitations.
+
+When upgrading from 0.1.1, download and install 0.3.0 manually. Subsequent updates can be downloaded and installed from the app.
 
 ## Your first transcription
 
@@ -83,15 +87,13 @@ SenseVoice weights use the [FunASR Model License](https://github.com/modelscope/
 
 | | Requirement |
 | --- | --- |
-| Operating system | Windows 10 or Windows 11, 64-bit |
+| Operating system | Windows 10/11 x64, or Linux x64 (experimental; Ubuntu 22.04 X11 tested) |
 | Processor | x64 Intel or AMD processor |
 | Hardware | A working microphone; no dedicated GPU required |
 | Internet | Required to download the application and selected models |
 | Storage | Application files plus 27 MB–1.52 GB for each installed model |
 
-Vokeyra currently supports Windows x64 only. macOS, Linux, and ARM builds are not available.
-
-Linux x64 support is being prepared for 0.3.0. Verification packages and current X11/Wayland limitations are documented in the [Linux build guide](docs/LINUX.md); Linux is not yet a tested release platform.
+macOS, ARM, and 32-bit builds are not available. On Linux, global shortcuts and automatic insertion require X11. Wayland support is limited to button recording and manual clipboard insertion and has not yet been verified on a native Wayland desktop. System audio muting is currently Windows-only.
 
 ## Privacy and local data
 

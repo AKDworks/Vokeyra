@@ -3,17 +3,15 @@ import { mkdir } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { resolve, join } from 'node:path';
 import assert from 'node:assert/strict';
-import { buildNative } from './build-native.mjs';
 
 if (process.platform !== 'win32') throw new Error('This integration check requires Windows.');
-await buildNative();
 await mkdir('.tmp', { recursive: true });
 await new Promise((done, reject) => {
   const compiler = spawn(join(process.env.WINDIR, 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'), ['/nologo', '/out:' + resolve('.tmp/NativeKeySender.exe'), resolve('tests/NativeKeySender.cs')], { windowsHide: true, stdio: 'inherit' });
   compiler.on('error', reject); compiler.on('exit', code => code === 0 ? done() : reject(new Error('Key sender compilation failed')));
 });
 function helper() {
-  const processHandle = spawn(resolve('dist/native/Vokeyra.Desktop.exe'), [String(process.pid)], { windowsHide: true, stdio: 'pipe' });
+  const processHandle = spawn(resolve('src-tauri/target/debug/vokeyra.exe'), ['--desktop-worker', String(process.pid)], { windowsHide: true, stdio: 'pipe' });
   let id = 0;
   const pending = new Map();
   let release;

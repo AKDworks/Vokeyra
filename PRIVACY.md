@@ -17,6 +17,6 @@ The hosting services receive ordinary connection information, such as your IP ad
 
 ## Microphone and system integration
 
-Microphone access is controlled by the operating system and the application's permission prompt. The recovery button resets a saved microphone refusal so you can make that decision again; it does not disable Windows privacy settings.
+Microphone access is controlled by the operating system and the application's permission prompt. Pressing Allow in the app explicitly grants its local WebView microphone permission, including after a previous refusal. It does not change or disable Windows privacy settings; system-level access must still be enabled by the user.
 
 Global shortcuts, clipboard insertion, startup launch, and temporary system audio muting are local features controlled by the app's settings. They do not transmit your input to a server.

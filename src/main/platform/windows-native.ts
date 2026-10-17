@@ -1,6 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { join } from 'node:path';
 import { config } from '../host';
 
 export class WindowsNative {
@@ -12,8 +11,8 @@ export class WindowsNative {
 
   async start(): Promise<void> {
     if (this.child) return;
-    const file = join(config.resourcePath, 'native', 'Vokeyra.Desktop.exe');
-    const child = spawn(file, [String(process.pid)], { windowsHide: true, stdio: 'pipe' });
+    if (!config.executablePath) throw new Error('Не найден системный модуль Vokeyra. Перезапустите приложение.');
+    const child = spawn(config.executablePath, ['--desktop-worker', String(process.pid)], { windowsHide: true, stdio: 'pipe' });
     this.child = child;
     const fail = (error: Error) => {
       if (this.child !== child) return;

@@ -4964,6 +4964,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 name = "vokeyra"
 version = "0.3.0"
 dependencies = [
+ "base64 0.22.1",
  "dunce",
  "reqwest 0.12.28",
  "semver",

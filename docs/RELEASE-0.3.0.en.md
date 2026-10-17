@@ -1,9 +1,5 @@
 # Vokeyra 0.3.0
 
-Draft for review. Linux packages passed automated installation/launch, interface, virtual-microphone recording and transcription checks on Ubuntu 22.04 X11. Physical devices and native Wayland remain unverified; Linux support is experimental. The Windows installer does not yet have an Authenticode signature.
-
----
-
 ## What's new
 
 - Migrated from Electron to Tauri, with a new application foundation and more compact packaging. Speech recognition still runs locally.
@@ -16,11 +12,17 @@ Draft for review. Linux packages passed automated installation/launch, interface
 
 ## Improvements and fixes
 
-- Fixed shortcut assignment and recording stopping prematurely in hold-to-record mode.
+- Fixed Windows startup failures, shortcut assignment and recording stopping prematurely in hold-to-record mode.
 - Added microphone permission recovery and a link to Windows microphone settings after access is blocked.
+- The application version remains visible if the recognition service cannot start.
 - The recording indicator responds more smoothly to speech, including quiet voices.
 - Improved removal of hesitation sounds and conversational fillers, including additional Russian hesitation spellings.
 
 ## Updating
 
 Install 0.3.0 manually when upgrading from 0.1.1. Future updates can be downloaded and installed from within the app.
+
+## Known limitations
+
+- Linux support is experimental. Automated checks cover Ubuntu 22.04 X11 with a virtual microphone; physical devices and native Wayland remain unverified.
+- The Windows installer is unsigned and may trigger SmartScreen. Installation over 0.1.1 has not yet been verified.

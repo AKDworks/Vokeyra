@@ -13,10 +13,15 @@ import { playFeedback } from './audio-feedback';
 import { onAppLanguageChange, setAppLanguage, tr } from './i18n';
 import { MicrophoneAccess } from './microphone-access';
 import { MicrophoneAccessError } from './microphone-errors';
+import { version as appVersion } from '../../package.json';
 
 (document.getElementById('brand-logo') as HTMLImageElement).src = brandLogo;
 setupIcons();
 setupInfoTooltips();
+// Version and microphone recovery must remain available if the ASR service
+// fails to initialize. Neither depends on a successful service snapshot.
+document.getElementById('footer-version')!.textContent = `Vokeyra ${appVersion}`;
+document.getElementById('app-version')!.textContent = `v${appVersion}`;
 
 const api = window.vokeyra;
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -103,6 +108,7 @@ const soundSettings = new SoundSettings(savePreferences, report);
 const microphoneAccess = new MicrophoneAccess(api, () => soundSettings.refreshDevices(false), requesting => {
   microphonePermissionBusy = requesting; updateControls();
 });
+const microphoneReady = microphoneAccess.initialize(navigator.userAgent.includes('Windows'));
 
 const modelsView = new ModelsView(api, () => refresh(true));
 const historyView = new HistoryView(el('history-list'), api, refresh, async id => {
@@ -553,7 +559,7 @@ if (!api) {
   el('boot-screen').hidden = true;
   document.body.classList.remove('booting');
   document.body.removeAttribute('aria-busy');
-  return Promise.all([microphoneAccess.initialize(snapshot.desktop.platform === 'windows'), soundSettings.refreshDevices(false)]);
+  return Promise.all([microphoneReady, soundSettings.refreshDevices(false)]);
 }).catch(error => {
   el('boot-screen').hidden = true;
   document.body.classList.remove('booting');

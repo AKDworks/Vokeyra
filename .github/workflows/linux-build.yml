@@ -43,6 +43,7 @@ jobs:
             src-tauri/target/
             .tmp/whisper-linux-1.8.3/
           key: linux-x64-build-v1-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: linux-x64-build-v1-
       - name: Build Debian and AppImage verification packages
         env:
           CARGO_BUILD_JOBS: '2'

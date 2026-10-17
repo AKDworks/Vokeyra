@@ -103,13 +103,12 @@ try {
       if (Date.now() > resetBy) throw new Error('Saved microphone denial was not reset.');
       await delay(100);
     }
-    const protocol = await browser.contexts()[0].newCDPSession(page);
-    await protocol.send('Browser.grantPermissions', { permissions: ['audioCapture'], origin: new URL(page.url()).origin });
+    assert.equal(await page.evaluate(async () => (await navigator.permissions.query({ name: 'microphone' })).state), 'granted');
     await page.evaluate(() => window.allowMicrophoneRequest());
     await page.waitForFunction(() => document.getElementById('microphone-access-status').textContent === 'Доступ к микрофону разрешён.');
     await page.waitForFunction(() => !document.getElementById('allow-microphone').disabled);
     await page.screenshot({ path: '.tmp/microphone-access.png', scale: 'css' });
-    console.log('Saved microphone denial → Allow button → native permission reset → microphone access passed.');
+    console.log('Saved microphone denial → Allow button → native permission grant → microphone access passed (no CDP permission override).');
   }
   if (withModel) {
     assert.ok(snapshot.models.find(item => item.model.id === 'gigaam-v3-e2e-rnnt')?.installed, 'Fixture model must be discovered.');
@@ -224,6 +223,24 @@ try {
     console.log('WebView microphone → AudioWorklet → Tauri IPC → GigaAM → history passed.');
   }
   await assert.rejects(page.evaluate(() => window.__TAURI_INTERNALS__.invoke('service_request', { method: 'service:shutdown', args: [] })));
+  if (nativeKeys) {
+    await page.locator('#replacement-from').fill('');
+    await page.locator('#replacement-from').focus();
+    const typed = 'Vokeyra Кирилл 😊';
+    const worker = spawn(executable ? resolve(executable) : resolve(`src-tauri/target/${release ? 'release' : 'debug'}/vokeyra.exe`),
+      ['--desktop-worker', String(process.pid)], { windowsHide: true, stdio: 'pipe' });
+    try {
+      await new Promise((done, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Native Unicode typing timed out')), 5000);
+        worker.once('error', error => { clearTimeout(timeout); reject(error); });
+        worker.stdout.once('data', data => { clearTimeout(timeout); String(data).startsWith('1\tok\t') ? done() : reject(new Error(String(data))); });
+        worker.stdin.end(`1\ttype\t${Buffer.from(typed).toString('base64')}\n`);
+      });
+      await page.waitForFunction(value => document.getElementById('replacement-from').value === value, typed, { timeout: 3000 });
+      assert.equal(await page.locator('#replacement-from').inputValue(), typed);
+    } finally { worker.kill(); }
+    console.log('Native Windows Unicode typing passed.');
+  }
   assert.equal((await page.evaluate(() => window.vokeyra.snapshot())).appVersion, version);
   assert.deepEqual(errors, []);
   const layout = await page.evaluate(() => ({ width: window.innerWidth, content: document.documentElement.scrollWidth,

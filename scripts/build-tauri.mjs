@@ -1,14 +1,12 @@
 import { build } from 'esbuild';
 import { build as viteBuild } from 'vite';
-import { cp, mkdir, writeFile, readFile, stat } from 'node:fs/promises';
-import { basename, join, resolve, dirname, relative } from 'node:path';
-import { buildNative } from './build-native.mjs';
+import { cp, mkdir, writeFile, stat, rm } from 'node:fs/promises';
+import { basename, join, resolve } from 'node:path';
 import { buildWhisperLinux } from './build-whisper-linux.mjs';
 
 export async function buildDesktop({ frontend = true } = {}) {
   const output = resolve(process.platform === 'linux' ? 'dist/desktop-linux' : 'dist/desktop');
   await mkdir(output, { recursive: true });
-  await buildNative();
   const common = { bundle: true, format: 'cjs', target: 'node24', platform: 'node', sourcemap: false,
     external: ['onnxruntime-node', 'sherpa-onnx-node'], logLevel: 'info' };
   await Promise.all([
@@ -36,14 +34,8 @@ export async function buildDesktop({ frontend = true } = {}) {
   }
   await cp(join(output, 'Node-LICENSE.txt'), join(output, 'licenses', 'Node-LICENSE.txt'));
   if (process.platform === 'win32') {
-    const native = resolve('dist/native');
-    await cp(native, join(output, 'native'), { recursive: true, filter: async path => {
-      if ((await stat(path)).isDirectory()) return true;
-      // Avoid replacing an identical helper executable Windows may still hold open.
-      const target = join(output, 'native', relative(native, path));
-      const existing = await readFile(target).catch(() => null);
-      return !existing || !existing.equals(await readFile(path));
-    } });
+    // Remove only the obsolete helper folder in our generated desktop output.
+    await rm(join(output, 'native'), { recursive: true, force: true });
     const whisper = resolve('resources/whisper');
     await cp(whisper, join(output, 'whisper'), { recursive: true,
       filter: path => path === whisper || /(?:whisper-cli\.exe|whisper\.dll|ggml(?:-base|-cpu-[^/\\]+)?\.dll)$/.test(path) });

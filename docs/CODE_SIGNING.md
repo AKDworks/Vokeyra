@@ -12,7 +12,7 @@ Tauri updater signatures (`.sig`) verify application updates. They are separate 
 - Reviewer of external contributions: [AKDworks](https://github.com/AKDworks).
 - Intended signing approver: [AKDworks](https://github.com/AKDworks), subject to the signing provider's onboarding.
 
-Signing is intended for Vokeyra's own application executable, its Windows desktop helper, and its installer. Third-party runtimes, speech engines, and native libraries retain their original provenance and licenses; they must not be individually re-signed as Vokeyra's own binaries.
+Signing is intended for Vokeyra's own application executable and installer. Windows integration is a worker mode of that same executable; no separate .NET desktop helper is distributed. Third-party runtimes, speech engines, and native libraries retain their original provenance and licenses; they must not be individually re-signed as Vokeyra's own binaries.
 
 ## Build and approval
 

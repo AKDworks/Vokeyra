@@ -37,7 +37,7 @@ export class MicrophoneAccess {
   setBusy(busy: boolean): void { this.busy = busy; this.render(); }
   blocked(): void {
     this.state = 'denied';
-    this.message('Доступ к микрофону заблокирован. Нажмите «Разрешить» и подтвердите доступ.');
+    this.message('Доступ к микрофону заблокирован. Нажмите «Разрешить», чтобы предоставить доступ приложению.');
     this.settings.hidden = !this.windows;
     this.render();
   }
@@ -52,14 +52,22 @@ export class MicrophoneAccess {
     if (this.busy || this.requesting) return;
     this.requesting = true; this.help.hidden = true; this.onRequesting(true); this.render();
     try {
-      if (this.windows && this.state === 'denied') await this.api.resetMicrophonePermission();
+      if (this.windows && this.state === 'denied') {
+        await this.api.grantMicrophonePermission();
+        this.state = 'granted';
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       stream.getTracks().forEach(track => track.stop());
       this.state = 'granted'; this.settings.hidden = true;
       this.message('Доступ к микрофону разрешён.');
       await this.onGranted();
     } catch (error) {
-      if (microphoneAccessDenied(error)) this.blocked();
+      if (microphoneAccessDenied(error)) {
+        if (this.windows && this.state === 'granted') {
+          this.message('Включите доступ к микрофону и разрешение для классических приложений в настройках Windows.');
+          this.settings.hidden = false;
+        } else this.blocked();
+      }
       else {
         this.message(error instanceof Error ? error.message : 'Не удалось получить доступ к микрофону.');
         this.settings.hidden = !this.windows;

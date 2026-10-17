@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 const resourcePath = resolve(process.platform === 'linux' ? 'dist/desktop-linux' : 'dist/desktop');
 const { version } = JSON.parse(await readFile(resolve('package.json'), 'utf8'));
 const dataPath = await mkdtemp(resolve('.tmp/tauri-service-'));
-const config = { dataPath, resourcePath, version, packaged: false, hidden: false };
+const config = { dataPath, resourcePath, executablePath: resolve('src-tauri/target/debug/vokeyra.exe'), version, packaged: false, hidden: false };
 const child = spawn(join(resourcePath, process.platform === 'win32' ? 'node.exe' : 'node'), [join(resourcePath, 'service.cjs')], {
   env: { ...process.env, VOKEYRA_HOST_CONFIG: JSON.stringify(config) }, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
 });

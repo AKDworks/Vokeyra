@@ -1,14 +1,14 @@
 use tauri::WebviewWindow;
 
-// Reset only this local main window's microphone decision. The next media
-// request still goes through the browser prompt and OS privacy controls.
+// The user explicitly presses Allow in our microphone settings. Change only
+// this local main window's browser permission; OS privacy controls still apply.
 #[cfg(windows)]
-pub async fn reset_permission(window: WebviewWindow) -> Result<(), String> {
+pub async fn grant_permission(window: WebviewWindow) -> Result<(), String> {
     use std::sync::{Arc, Mutex};
     use webview2_com::{
         Microsoft::Web::WebView2::Win32::{
             ICoreWebView2Profile4, ICoreWebView2_13, COREWEBVIEW2_PERMISSION_KIND_MICROPHONE,
-            COREWEBVIEW2_PERMISSION_STATE_DEFAULT,
+            COREWEBVIEW2_PERMISSION_STATE_ALLOW,
         },
         SetPermissionStateCompletedHandler,
     };
@@ -44,7 +44,7 @@ pub async fn reset_permission(window: WebviewWindow) -> Result<(), String> {
                     profile.SetPermissionState(
                         COREWEBVIEW2_PERMISSION_KIND_MICROPHONE,
                         &HSTRING::from(origin),
-                        COREWEBVIEW2_PERMISSION_STATE_DEFAULT,
+                        COREWEBVIEW2_PERMISSION_STATE_ALLOW,
                         &callback,
                     )
                 }
@@ -61,12 +61,12 @@ pub async fn reset_permission(window: WebviewWindow) -> Result<(), String> {
         .map_err(|_| "Не удалось повторно запросить доступ к микрофону.".to_string())?
         .map_err(|_| "Не удалось повторно запросить доступ к микрофону.".to_string())?
         .map_err(|error| {
-            eprintln!("Microphone permission reset failed: {error}");
+            eprintln!("Microphone permission grant failed: {error}");
             "Не удалось повторно запросить доступ к микрофону.".to_string()
         })
 }
 
 #[cfg(not(windows))]
-pub async fn reset_permission(_window: WebviewWindow) -> Result<(), String> {
+pub async fn grant_permission(_window: WebviewWindow) -> Result<(), String> {
     Ok(())
 }
