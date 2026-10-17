@@ -31,6 +31,8 @@ npm ci
 npm run dist:linux:unsigned
 ```
 
+Проект отключает скачивание необязательных CUDA-компонентов ONNX Runtime: используются CPU-библиотеки из npm-пакета. В CI это также задано переменной `ONNXRUNTIME_NODE_INSTALL=skip`.
+
 Пакеты находятся в `src-tauri/target/release/bundle/deb` и `src-tauri/target/release/bundle/appimage`. Служба Linux собирается отдельно в `dist/desktop-linux`. Исходники и промежуточная сборка Whisper хранятся в игнорируемой `.tmp/whisper-linux-1.8.3`.
 
 Для AppImage установить xdotool, wl-clipboard и необходимые компоненты GStreamer через менеджер пакетов дистрибутива. Для `.deb` зависимости объявлены в пакете. AppImage запускать из постоянной папки пользователя; на системах без FUSE можно использовать поддерживаемый AppImage режим извлечения. Не запускать Vokeyra от root.
