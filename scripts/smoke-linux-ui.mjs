@@ -15,15 +15,20 @@ const temporary = await mkdtemp(resolve('.tmp/linux-ui-'));
 const reports = resolve('.tmp/linux-ui-reports');
 await mkdir(reports, { recursive: true });
 const installed = '/usr/bin/vokeyra';
-const appimages = (await readdir('src-tauri/target/release/bundle/appimage')).filter(name => name.endsWith('.AppImage') && name.includes(version));
-assert.equal(appimages.length, 1, 'Expected one AppImage for this version.');
-const applications = [
-  ['deb', installed],
-  ['appimage', resolve('src-tauri/target/release/bundle/appimage', appimages[0])],
-];
+const packageFlag = process.argv.indexOf('--package');
+const packageFormat = packageFlag === -1 ? undefined : process.argv[packageFlag + 1];
+let applications;
+if (packageFormat) {
+  assert.equal(packageFormat, 'rpm', 'Unsupported installed package check.');
+  applications = [[packageFormat, installed]];
+} else {
+  const appimages = (await readdir('src-tauri/target/release/bundle/appimage')).filter(name => name.endsWith('.AppImage') && name.includes(version));
+  assert.equal(appimages.length, 1, 'Expected one AppImage for this version.');
+  applications = [['deb', installed], ['appimage', resolve('src-tauri/target/release/bundle/appimage', appimages[0])]];
+}
 const speech = join(temporary, 'speech.wav');
 console.log('Preparing synthetic speech and PulseAudio microphone.');
-await run('espeak', ['-v', 'en-us', '-s', '140', '-w', speech, 'Hello world. This is a test of local speech recognition.']);
+await run(process.env.VOKEYRA_TEST_ESPEAK || 'espeak', ['-v', 'en-us', '-s', '140', '-w', speech, 'Hello world. This is a test of local speech recognition.']);
 await run('pulseaudio', ['--start', '--exit-idle-time=-1', `--log-target=file:${join(temporary, 'pulseaudio.log')}`]);
 const modules = [];
 let player;
@@ -169,5 +174,5 @@ try {
   for (const module of modules.reverse()) await run('pactl', ['unload-module', module]).catch(() => {});
   await writeFile(join(reports, 'results.json'), JSON.stringify(result, null, 2) + '\n');
 }
-assert.equal(result.packages.length, 2);
-console.log('Linux .deb and AppImage UI/virtual-microphone checks passed. Physical devices and native Wayland remain unverified.');
+assert.equal(result.packages.length, applications.length);
+console.log(`Linux ${applications.map(([format]) => format).join(', ')} UI/virtual-microphone checks passed. Physical devices and native Wayland remain unverified.`);

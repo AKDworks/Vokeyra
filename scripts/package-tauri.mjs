@@ -6,6 +6,16 @@ import { collectUpdatePlatforms } from './update-manifest.mjs';
 const keyPath = resolve('.signing/tauri-update.key');
 const unsigned = process.argv.includes('--unsigned');
 const args = ['node_modules/@tauri-apps/cli/tauri.js', 'build', ...process.argv.slice(2).filter(arg => arg !== '--unsigned')];
+const bundleFlag = args.findIndex(arg => arg === '--bundles' || arg === '-b');
+let bundles;
+if (bundleFlag !== -1) {
+  const values = [];
+  for (const arg of args.slice(bundleFlag + 1)) {
+    if (arg.startsWith('-')) break;
+    values.push(...arg.split(',').filter(Boolean));
+  }
+  bundles = values;
+}
 const env = { ...process.env };
 if (!env.CARGO_HOME && await stat('.tmp/cargo-home/registry').then(item => item.isDirectory()).catch(() => false)) {
   env.CARGO_HOME = resolve('.tmp/cargo-home');
@@ -28,9 +38,9 @@ process.exitCode = code ?? 1;
 if (code === 0 && env.TAURI_SIGNING_PRIVATE_KEY && !args.includes('--no-bundle')) {
   const { version } = JSON.parse(await readFile('package.json', 'utf8'));
   const root = resolve('src-tauri/target/release/bundle');
-  const platforms = await collectUpdatePlatforms(root, version, process.platform, process.arch);
+  const platforms = await collectUpdatePlatforms(root, version, process.platform, process.arch, bundles);
   const manifest = { version, notes: '', pub_date: new Date().toISOString(), platforms };
   const json = JSON.stringify(manifest, null, 2) + '\n';
   await writeFile(join(root, `latest-${process.platform}-${process.arch}.json`), json);
-  if (process.platform === 'win32') await writeFile(join(root, 'nsis/latest.json'), json);
+  if (process.platform === 'win32' && (!bundles || bundles.includes('nsis'))) await writeFile(join(root, 'nsis/latest.json'), json);
 }

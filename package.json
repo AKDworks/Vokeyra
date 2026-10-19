@@ -1,6 +1,6 @@
 {
   "name": "vokeyra",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Private, local speech to text for your desktop",
   "license": "MIT",
   "author": "AKDworks",
@@ -25,10 +25,12 @@
     "start": "node scripts/tauri.mjs dev",
     "tauri": "node scripts/tauri.mjs",
     "pack:win": "node scripts/package-tauri.mjs --no-bundle",
-    "dist:win": "node scripts/package-tauri.mjs --bundles nsis",
+    "dist:win": "node scripts/package-tauri.mjs --bundles nsis,msi",
+    "dist:win:msi": "node scripts/package-tauri.mjs --bundles msi",
     "pack:linux": "node scripts/package-tauri.mjs --no-bundle",
-    "dist:linux": "node scripts/package-tauri.mjs --bundles deb,appimage",
-    "dist:linux:unsigned": "node scripts/package-tauri.mjs --unsigned --bundles deb,appimage",
+    "dist:linux": "node scripts/package-tauri.mjs --bundles deb,appimage,rpm",
+    "dist:linux:rpm": "node scripts/package-tauri.mjs --bundles rpm",
+    "dist:linux:unsigned": "node scripts/package-tauri.mjs --unsigned --bundles deb,appimage,rpm",
     "smoke": "node scripts/smoke-tauri.mjs",
     "smoke:service": "node scripts/smoke-service.mjs"
   },

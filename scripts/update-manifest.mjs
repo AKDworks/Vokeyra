@@ -1,12 +1,15 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export async function collectUpdatePlatforms(root, version, platform, arch) {
+export async function collectUpdatePlatforms(root, version, platform, arch, bundles) {
   const architecture = { x64: 'x86_64', arm64: 'aarch64' }[arch];
   if (!architecture) throw new Error(`Unsupported update architecture: ${arch}`);
   const platforms = {};
-  const formats = platform === 'win32' ? [['nsis', '.exe']] : platform === 'linux' ? [['appimage', '.AppImage'], ['deb', '.deb']] : [];
-  if (!formats.length) throw new Error(`Unsupported update platform: ${platform}`);
+  const available = platform === 'win32' ? [['nsis', '.exe'], ['msi', '.msi']] : platform === 'linux' ? [['appimage', '.AppImage'], ['deb', '.deb'], ['rpm', '.rpm']] : [];
+  if (!available.length) throw new Error(`Unsupported update platform: ${platform}`);
+  if (bundles?.some(name => !available.some(([format]) => name === format))) throw new Error('Unsupported updater bundle format.');
+  const formats = available.filter(([format]) => !bundles || bundles.includes(format));
+  if (!formats.length) throw new Error('No updater bundle formats selected.');
   for (const [format, suffix] of formats) {
     const folder = join(root, format);
     const names = await readdir(folder);

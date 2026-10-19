@@ -1,6 +1,6 @@
 {
   "bundle": {
-    "targets": ["deb", "appimage"],
+    "targets": ["deb", "appimage", "rpm"],
     "category": "Utility",
     "shortDescription": "Private, local speech to text",
     "resources": { "../dist/desktop-linux/": "desktop/" },
@@ -10,7 +10,11 @@
         "recommends": ["libayatana-appindicator3-1"],
         "section": "utils"
       },
-      "appimage": { "bundleMediaFramework": true }
+      "appimage": { "bundleMediaFramework": true },
+      "rpm": {
+        "depends": ["webkit2gtk4.1", "gtk3", "libappindicator-gtk3", "xdotool", "wl-clipboard", "libgomp", "libstdc++", "gstreamer1-plugins-base", "gstreamer1-plugins-good", "gstreamer1-plugins-bad-free", "pipewire-gstreamer", "polkit"],
+        "release": "1"
+      }
     }
   }
 }

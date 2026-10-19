@@ -24,7 +24,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake pkg-config curl wget file \
             libwebkit2gtk-4.1-dev libssl-dev libxdo-dev libayatana-appindicator3-dev \
-            librsvg2-dev patchelf libfuse2 xdotool xclip wl-clipboard xvfb xterm \
+            librsvg2-dev patchelf libfuse2 rpm xdotool xclip wl-clipboard xvfb xterm \
             webkit2gtk-driver pulseaudio pulseaudio-utils espeak dbus-x11 \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-pulseaudio
       - name: Set up Rust
@@ -44,11 +44,13 @@ jobs:
             .tmp/whisper-linux-1.8.3/
           key: linux-x64-build-v1-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: linux-x64-build-v1-
-      - name: Build Debian and AppImage verification packages
+      - name: Build Debian, RPM and AppImage verification packages
         env:
           CARGO_BUILD_JOBS: '2'
           APPIMAGE_EXTRACT_AND_RUN: '1'
-        run: npm run dist:linux:unsigned
+        run: |
+          node --input-type=module -e "import { rm } from 'node:fs/promises'; await rm('src-tauri/target/release/bundle', { recursive: true, force: true });"
+          npm run dist:linux:unsigned
       - name: Save Linux build cache
         if: steps.build-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
@@ -61,6 +63,15 @@ jobs:
           key: ${{ steps.build-cache.outputs.cache-primary-key }}
       - name: Check packaged runtimes and X11 paste integration
         run: xvfb-run -a node scripts/smoke-linux.mjs
+      - name: Prepare shared microphone-test model
+        run: |
+          node --input-type=module <<'JS'
+          import { readFile, mkdir, cp } from 'node:fs/promises';
+          import { join } from 'node:path';
+          const runtime = JSON.parse(await readFile('.tmp/linux-runtime-report.json', 'utf8'));
+          await mkdir('.tmp/package-fixture', { recursive: true });
+          await cp(join(runtime.modelsPath, 'whisper-tiny-q5-1'), '.tmp/package-fixture/whisper-tiny-q5-1', { recursive: true });
+          JS
       - name: Install the generated Debian package
         run: sudo apt-get install -y "$(realpath src-tauri/target/release/bundle/deb/*.deb)"
       - name: Check installed UI, virtual microphone, transcription and AppImage
@@ -82,3 +93,74 @@ jobs:
           path: |
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/rpm/*.rpm
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: Vokeyra-linux-package-test-model
+          if-no-files-found: error
+          retention-days: 7
+          path: .tmp/package-fixture/
+
+  rpm-package:
+    needs: linux-x64
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    container:
+      image: fedora:44
+      # WebKit's sandbox needs user namespaces; these disposable test containers
+      # contain no signing keys and run the application as an unprivileged user.
+      options: --security-opt seccomp=unconfined --shm-size=512m
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install Fedora desktop-test dependencies
+        run: |
+          dnf install -y git shadow-utils util-linux dbus-x11 xorg-x11-server-Xvfb \
+            xorg-x11-xauth pulseaudio pulseaudio-utils espeak-ng webkit2gtk4.1-devel
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Vokeyra-linux-x64-verification
+          path: .tmp/package-artifacts/
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: Vokeyra-linux-package-test-model
+          path: .tmp/package-fixture/
+      - name: Create unprivileged test user
+        run: |
+          useradd --user-group --create-home --shell /bin/bash vokeyra-test
+          chown -R vokeyra-test:vokeyra-test "$GITHUB_WORKSPACE/.tmp"
+          install -d -m 700 -o vokeyra-test -g vokeyra-test /tmp/vokeyra-test-runtime
+      - name: Install RPM with Fedora dependency resolution
+        run: |
+          dnf install -y .tmp/package-artifacts/rpm/*.rpm
+          rpm -q vokeyra
+          command -v WebKitWebDriver
+      - name: Check installed native runtimes
+        run: |
+          cd /usr/lib/Vokeyra/desktop
+          ./node -e "require('onnxruntime-node'); require('sherpa-onnx-node')"
+          ldd /usr/bin/vokeyra
+      - name: Prepare the isolated recording fixture
+        run: |
+          /usr/lib/Vokeyra/desktop/node --input-type=module <<'JS'
+          import { writeFile } from 'node:fs/promises';
+          import { resolve } from 'node:path';
+          await writeFile('.tmp/linux-runtime-report.json', JSON.stringify({ modelsPath: resolve('.tmp/package-fixture') }));
+          JS
+          chown -R vokeyra-test:vokeyra-test "$GITHUB_WORKSPACE/.tmp"
+      - name: Check installed RPM UI, microphone and transcription
+        timeout-minutes: 10
+        run: |
+          runuser -u vokeyra-test -- env HOME=/home/vokeyra-test \
+            XDG_RUNTIME_DIR=/tmp/vokeyra-test-runtime VOKEYRA_TEST_ESPEAK=espeak-ng \
+            dbus-run-session -- xvfb-run -a /usr/lib/Vokeyra/desktop/node \
+            scripts/smoke-linux-ui.mjs --package rpm
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: Vokeyra-rpm-desktop-reports
+          if-no-files-found: warn
+          retention-days: 14
+          path: .tmp/linux-ui-reports/

@@ -25,7 +25,7 @@ jobs:
         env:
           ONNXRUNTIME_NODE_INSTALL: skip
       - run: npm.cmd test
-      - name: Build verification installer
+      - name: Build EXE and MSI verification installers
         run: npm.cmd run dist:win -- --unsigned
         env:
           CARGO_BUILD_JOBS: '2'
@@ -34,4 +34,6 @@ jobs:
           name: Vokeyra-windows-x64-verification
           if-no-files-found: error
           retention-days: 14
-          path: src-tauri/target/release/bundle/nsis/*_x64-setup.exe
+          path: |
+            src-tauri/target/release/bundle/nsis/*_x64-setup.exe
+            src-tauri/target/release/bundle/msi/*_x64_*.msi
