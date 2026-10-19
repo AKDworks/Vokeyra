@@ -19,7 +19,7 @@ Recognition runs locally on your computer. Vokeyra has no accounts, cloud transc
 ## Download and install
 
 1. Open the [latest release](../../releases/latest).
-2. Download the Windows `.exe` installer.
+2. Download the Windows `.exe` or `.msi` installer.
 3. Run the installer and launch Vokeyra.
 4. Allow microphone access when Windows asks for it.
 
@@ -27,7 +27,9 @@ The interface uses Microsoft Edge WebView2. The installer downloads this system 
 
 The Windows installer is not yet digitally signed. Windows SmartScreen may display a warning.
 
-For Linux x64, download the `.deb` package for Ubuntu/Debian or the `.AppImage` for other distributions. Linux support is experimental; see the [Linux guide](docs/LINUX.md) for requirements and limitations.
+The EXE installs for the current user; MSI installs for all users and requires administrator approval. Keep the same format when updating.
+
+For Linux x64, download `.deb` for Ubuntu/Debian, `.rpm` for Fedora, or `.AppImage` for other distributions. Linux support is experimental; see the [Linux guide](docs/LINUX.md) for requirements and limitations.
 
 When upgrading from 0.1.1, download and install 0.3.0 manually. Subsequent updates can be downloaded and installed from the app.
 
