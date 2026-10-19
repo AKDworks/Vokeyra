@@ -181,6 +181,9 @@ function updateControls(): void {
 async function refresh(fillSettings = false): Promise<void> {
   snapshot = await api.snapshot();
   setAppLanguage(snapshot.settings.appLanguage);
+  const manualRecording = el<HTMLDetailsElement>('manual-recording');
+  manualRecording.hidden = snapshot.desktop.platform !== 'linux';
+  if (!initialized && snapshot.desktop.platform === 'linux') manualRecording.open = true;
   el('platform-note').textContent = tr(snapshot.desktop.warning ?? '');
   el('platform-note').hidden = !snapshot.desktop.warning;
   el('push-to-talk').dataset.unavailable = String(!snapshot.desktop.pushToTalk);
@@ -225,10 +228,10 @@ async function refresh(fillSettings = false): Promise<void> {
   }
   initialized = true;
   renderDangerAvailability();
-  renderModels();
+  updateControls();
   renderHistory();
 }
-function renderHistory(): void { historyView.render(snapshot.history); }
+function renderHistory(): void { historyView.render(snapshot.history, snapshot.desktop.platform === 'linux'); }
 function renderModels(): void { if (snapshot) modelsView.update(snapshot, downloads, mode !== 'idle' || capturingHotkey || updateInProgress || maintenanceInProgress); }
 async function toggleRecording(fromHold = false): Promise<void> {
   if (updateInProgress || maintenanceInProgress || microphonePermissionBusy || confirmationOpen || capturingHotkey || mode === 'starting' || mode === 'transcribing') return;

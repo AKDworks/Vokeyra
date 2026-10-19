@@ -90,6 +90,13 @@ try {
         if (!response.ok) throw new Error(`${response.error}\n${response.stack ?? ''}`);
         return response.value;
       };
+      async function clickVisible(selector) {
+        const element = await request('POST', `/session/${session}/element`, { using: 'css selector', value: selector });
+        const id = element['element-6066-11e4-a52e-4f735466cecf'];
+        assert.ok(id, `Element not found: ${selector}`);
+        // Native WebDriver clicks reject hidden controls, unlike DOM .click().
+        await request('POST', `/session/${session}/element/${id}/click`, {});
+      }
       async function until(fn, description, timeout = 15000) {
         const deadline = Date.now() + timeout;
         while (Date.now() < deadline) {
@@ -121,6 +128,12 @@ try {
         assert.equal(snapshot.desktop.platform, 'linux'); assert.equal(snapshot.desktop.session, 'x11');
         assert.equal(snapshot.hotkeyRegistered, true); assert.equal(snapshot.engineReady, true);
         assert.equal(await execute(() => document.getElementById('footer-version').textContent), `Vokeyra ${version}`);
+        await clickVisible('nav button[data-tab="history"]');
+        assert.equal(await execute(() => {
+          const panel = document.getElementById('manual-recording');
+          const button = document.getElementById('record');
+          return !panel.hidden && panel.open && button.getClientRects().length > 0;
+        }), true, 'Linux users must have a visible manual recording control.');
         console.log(`${format}: interface and catalog ready; requesting microphone.`);
         const input = await execute(async () => {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -130,11 +143,11 @@ try {
         assert.equal(input.readyState, 'live'); assert.equal(input.secure, true); assert.equal(input.audioWorklet, true);
         assert.match(input.label, /Vokeyra/i, 'Use the actual PulseAudio test microphone, not a WebKit mock.');
         console.log(`${format}: microphone available: ${input.label}; starting recording.`);
-        await execute(() => document.getElementById('record').click());
+        await clickVisible('#record');
         await until(() => execute(() => /Recording|Идёт запись/.test(document.getElementById('record-status').textContent)), 'recording start');
         await delay(6500);
         assert.match(await execute(() => document.getElementById('record-status').textContent), /Recording|Идёт запись/);
-        await execute(() => document.getElementById('record').click());
+        await clickVisible('#record');
         const recorded = await until(async () => {
           const state = await execute(() => window.vokeyra.snapshot());
           const entry = state.history[0];

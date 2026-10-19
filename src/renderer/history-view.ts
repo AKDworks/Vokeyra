@@ -33,14 +33,14 @@ export class HistoryView {
     });
   }
 
-  render(entries: HistoryEntry[]): void {
-    const signature = JSON.stringify(entries);
+  render(entries: HistoryEntry[], manualRecording = false): void {
+    const signature = JSON.stringify({ entries, manualRecording });
     if (this.signature === signature) return;
     this.signature = signature;
     this.stop(); this.list.replaceChildren();
     if (!entries.length) {
       const empty = document.createElement('p'); empty.className = 'empty-state';
-      empty.textContent = 'Записей пока нет. Начните с горячей клавиши.';
+      empty.textContent = manualRecording ? 'Записей пока нет. Нажмите «Начать запись» выше.' : 'Записей пока нет. Начните с горячей клавиши.';
       this.list.append(empty); return;
     }
     for (const entry of entries) this.list.append(this.card(entry));

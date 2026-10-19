@@ -4,7 +4,7 @@ name: Linux x64 build
 on:
   workflow_dispatch:
   push:
-    branches: ['linux-0.3.0']
+    branches: ['testing']
 
 permissions:
   contents: read

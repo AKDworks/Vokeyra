@@ -41,7 +41,7 @@ export class LinuxNative {
     return { platform: 'linux', session: this.session, globalShortcut: x11,
       pushToTalk: x11, muteAudio: false,
       automaticPaste: x11 && !!this.tools.xdotool, directTyping: x11 && !!this.tools.xdotool,
-      warning: this.session === 'wayland' ? 'В Wayland запись запускается кнопкой. Результат копируется в буфер обмена.'
+      warning: this.session === 'wayland' ? 'В Wayland горячая клавиша недоступна. Для записи откройте «История» и нажмите «Начать запись». Результат копируется в буфер обмена.'
         : !this.tools.xdotool ? 'Для автоматической вставки в Linux установите xdotool.' : undefined };
   }
   async start(): Promise<void> {
