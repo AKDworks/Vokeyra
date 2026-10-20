@@ -95,8 +95,9 @@ const safeId = (value: unknown): string => {
 };
 function validateSettings(value: unknown, base = defaultPreferences) {
   const result = validatePreferences(value, base);
-  if (process.platform !== 'win32' && result.muteWhileRecording) throw new Error('Отключение системного звука пока доступно только в Windows.');
-  if (process.platform === 'linux' && desktop.capabilities().session !== 'x11' && result.pushToTalk) throw new Error('Удержание клавиши в Linux пока доступно только в X11.');
+  const caps = desktop.capabilities();
+  if (!caps.muteAudio && result.muteWhileRecording) throw new Error('Отключение системного звука пока доступно только в Windows.');
+  if (!caps.pushToTalk && result.pushToTalk) throw new Error('Удержание клавиши в Linux пока доступно только в X11.');
   return result;
 }
 function whisperExecutable(): string {
@@ -383,11 +384,24 @@ async function start(): Promise<void> {
     .then(() => mkdir(recordingsPath, { recursive: true }));
   const coreReady = Promise.all([initializeDesktop, initializeHistory, initializeModels, initializeScratch]);
   registerIpc();
+  hostEvents.on('shortcut:toggle', () => {
+    shortcutDown = false;
+    heldRecording = false;
+    emit('recording:toggle');
+  });
   hostEvents.on('shortcut:pressed', toggle);
   hostEvents.on('shortcut:released', () => {
     if (process.platform === 'win32') return; // Windows tracks modifier release through its native helper.
     shortcutDown = false;
     if (heldRecording) { heldRecording = false; emit('recording:hold', false); }
+  });
+  hostEvents.on('shortcut:cancel', () => {
+    shortcutDown = false;
+    heldRecording = false;
+    recording?.controller.abort();
+    overlay?.hide();
+    void desktop.restoreAudio();
+    emit('recording:cancel-request');
   });
   hostEvents.on('window:blur', () => { void endShortcutCapture().catch(console.error); });
   hostEvents.on('app:update-state', (state: AppUpdateState) => { updateState = state; updateBusy = ['checking', 'available', 'downloading', 'installing'].includes(state.phase); emit('app:update-state', state); });

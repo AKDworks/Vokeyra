@@ -17,11 +17,23 @@ export class MicrophoneRecorder {
   private flushed?: () => void;
   async start(onLimit: () => void, onLevel: (level: number) => void = () => {}, options: Pick<Settings, 'microphoneId' | 'inputChannel'> = { microphoneId: 'default', inputChannel: 'all' }): Promise<void> {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: {
-        deviceId: options.microphoneId === 'default' ? undefined : { exact: options.microphoneId },
-        channelCount: options.inputChannel === 'second' ? { exact: 2 } : { ideal: 2 },
-        echoCancellation: false, noiseSuppression: false, autoGainControl: false,
-      }, video: false });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: {
+          deviceId: options.microphoneId === 'default' ? undefined : { exact: options.microphoneId },
+          channelCount: options.inputChannel === 'second' ? { exact: 2 } : { ideal: 2 },
+          echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+        }, video: false });
+      } catch (err) {
+        if (options.microphoneId !== 'default') {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: {
+            channelCount: options.inputChannel === 'second' ? { exact: 2 } : { ideal: 2 },
+            echoCancellation: false, noiseSuppression: false, autoGainControl: false,
+          }, video: false });
+        } else {
+          throw err;
+        }
+      }
       if (this.cancelled) { stream.getTracks().forEach(track => track.stop()); throw new Error('Запись отменена.'); }
       this.stream = stream;
       this.context = new AudioContext({ sampleRate: 16000 });
