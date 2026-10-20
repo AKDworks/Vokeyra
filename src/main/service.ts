@@ -144,8 +144,9 @@ async function persistSettings(next: Settings, allowUnavailableHotkey = false): 
   if (needsRegistration) {
     nextHotkeyRegistered = await desktop.registerShortcut(next.hotkey, toggle);
     if (!nextHotkeyRegistered && !allowUnavailableHotkey && desktop.capabilities().globalShortcut) {
-      if (desktop.capabilities().session === 'wayland') throw new Error('Не удалось применить горячую клавишу. Проверьте конфигурацию и права swhkd.');
-      throw new Error('Сочетание занято другим приложением. Выберите другое.');
+      if (desktop.capabilities().session === 'wayland') {
+        if (next.hotkey !== previousHotkey) throw new Error('Не удалось применить горячую клавишу. Проверьте конфигурацию и права swhkd.');
+      } else throw new Error('Сочетание занято другим приложением. Выберите другое.');
     }
   }
   try { await atomicJson(settingsPath, next); }
