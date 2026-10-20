@@ -173,12 +173,14 @@ try {
         await execute(() => window.vokeyra.saveSettings({ modelUnloadDelay: '2m' }));
         assert.equal(JSON.parse(await readFile(join(profile, 'settings.json'), 'utf8')).modelUnloadDelay, '2m');
         console.log(`${format}: settings saved; capturing screenshot.`);
-        await writeFile(join(reports, `${format}.png`), Buffer.from(await request('GET', `/session/${session}/screenshot`), 'base64'));
+        // WebKitGTK's screenshot endpoint can hang with the DMA-BUF workaround.
+        // Capture the actual X11 display instead of asking the WebView to render a snapshot.
+        await run('import', ['-window', 'root', join(reports, `${format}.png`)]);
         result.packages.push({ format, application, microphone: input, recording: samples, transcript: recorded.text, settingsSaved: true, versionVerified: true });
         console.log(`${format}: installed application → PulseAudio microphone → AudioWorklet → Whisper → history passed: ${recorded.text}`);
       } catch (error) {
         if (session) {
-          await writeFile(join(reports, `${format}-failure.png`), Buffer.from(await request('GET', `/session/${session}/screenshot`, undefined, 5000).catch(() => ''), 'base64'));
+          await run('import', ['-window', 'root', join(reports, `${format}-failure.png`)]).catch(console.error);
           console.error(await execute(() => ({ status: document.getElementById('record-status')?.textContent, notice: document.getElementById('notice-text')?.textContent, url: location.href })).catch(() => null));
         }
         throw error;
