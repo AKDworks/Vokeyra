@@ -236,11 +236,25 @@ async fn apply_settings(app: &tauri::AppHandle, settings: Value) -> Reply {
         }
     }
     *state.settings.lock().unwrap() = settings.clone();
-    if first
-        && !settings["hideOnStartup"].as_bool().unwrap_or(false)
-        && !std::env::args().any(|arg| arg == "--hidden")
-    {
-        show_main(app);
+    if first {
+        let has_toggle = std::env::args().any(|arg| arg == "--toggle");
+        let has_press = std::env::args().any(|arg| arg == "--press");
+        let has_hidden = std::env::args().any(|arg| arg == "--hidden" || arg == "--autostart");
+        if has_toggle {
+            let service = state.service.clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(300)).await;
+                service.event("shortcut:toggle", Value::Null);
+            });
+        } else if has_press {
+            let service = state.service.clone();
+            tauri::async_runtime::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(300)).await;
+                service.event("shortcut:pressed", Value::Null);
+            });
+        } else if !settings["hideOnStartup"].as_bool().unwrap_or(false) && !has_hidden {
+            show_main(app);
+        }
     }
     Ok(Value::Null)
 }
@@ -430,22 +444,26 @@ async fn host_request(app: tauri::AppHandle, method: &str, args: &[Value]) -> Re
             let w = app
                 .get_webview_window("overlay")
                 .ok_or("Overlay unavailable")?;
-            let cursor = app.cursor_position().map_err(|e| e.to_string())?;
             let monitor = app
-                .monitor_from_point(cursor.x, cursor.y)
-                .map_err(|e| e.to_string())?
-                .or(app.primary_monitor().map_err(|e| e.to_string())?)
-                .ok_or("Monitor unavailable")?;
-            let scale = monitor.scale_factor();
-            let area = monitor.work_area();
-            let x = area.position.x + ((area.size.width as f64 - 248. * scale) / 2.).round() as i32;
-            let y = if text()? == "top" {
-                area.position.y + (20. * scale) as i32
+                .cursor_position()
+                .ok()
+                .and_then(|cursor| app.monitor_from_point(cursor.x, cursor.y).ok().flatten())
+                .or_else(|| w.current_monitor().ok().flatten())
+                .or_else(|| app.primary_monitor().ok().flatten())
+                .or_else(|| app.available_monitors().ok().and_then(|m| m.into_iter().next()));
+            if let Some(monitor) = monitor {
+                let scale = monitor.scale_factor();
+                let area = monitor.work_area();
+                let x = area.position.x + ((area.size.width as f64 - 248. * scale) / 2.).round() as i32;
+                let y = if text().unwrap_or("bottom") == "top" {
+                    area.position.y + (20. * scale) as i32
+                } else {
+                    area.position.y + area.size.height as i32 - (78. * scale) as i32
+                };
+                let _ = w.set_position(PhysicalPosition::new(x, y));
             } else {
-                area.position.y + area.size.height as i32 - (78. * scale) as i32
-            };
-            w.set_position(PhysicalPosition::new(x, y))
-                .map_err(|e| e.to_string())?;
+                let _ = w.center();
+            }
             w.show().map_err(|e| e.to_string())?;
             Ok(Value::Null)
         }
@@ -591,6 +609,12 @@ fn read_service(
 }
 
 fn main() {
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+        }
+    }
     #[cfg(windows)]
     if let Some(code) = desktop_worker::run_if_requested() { std::process::exit(code); }
     let builder = tauri::Builder::default()
@@ -626,7 +650,25 @@ fn main() {
     let builder = if std::env::var_os("VOKEYRA_TEST_DATA").is_some() {
         builder
     } else {
-        builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
+        builder.plugin(tauri_plugin_single_instance::init(|app, argv, _| {
+            if let Some(state) = app.try_state::<Desktop>() {
+                if argv.iter().any(|arg| arg == "--toggle") {
+                    state.service.event("shortcut:toggle", Value::Null);
+                    return;
+                }
+                if argv.iter().any(|arg| arg == "--press") {
+                    state.service.event("shortcut:pressed", Value::Null);
+                    return;
+                }
+                if argv.iter().any(|arg| arg == "--release") {
+                    state.service.event("shortcut:released", Value::Null);
+                    return;
+                }
+                if argv.iter().any(|arg| arg == "--cancel") {
+                    state.service.event("shortcut:cancel", Value::Null);
+                    return;
+                }
+            }
             show_main(app)
         }))
     };

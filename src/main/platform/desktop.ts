@@ -1,4 +1,4 @@
-import { host } from '../host';
+import { config, host } from '../host';
 import { WindowsNative } from './windows-native';
 import { LinuxNative } from './linux-native';
 import { windowsShortcutKeys } from './windows-keys';
@@ -26,23 +26,30 @@ const clipboardWrite = (text: string) => linux ? linux.clipboardWrite(text, valu
 export const desktop: DesktopIntegration = {
   capabilities: () => linux?.capabilities() ?? { platform: native ? 'windows' : 'other', session: 'native',
     globalShortcut: !!native, pushToTalk: !!native, muteAudio: !!native, automaticPaste: !!native, directTyping: !!native },
-  registerShortcut: (key, callback) => linux && !linux.capabilities().globalShortcut ? Promise.resolve(false) : host<boolean>('shortcut:register', key),
+  registerShortcut: (key, callback) => {
+    if (linux) {
+      if (linux.capabilities().session === 'wayland') return linux.syncHotkey(key, config.dataPath, config.executablePath);
+      if (!linux.capabilities().globalShortcut) return Promise.resolve(false);
+    }
+    return host<boolean>('shortcut:register', key);
+  },
   unregisterShortcut: key => host('shortcut:unregister', key),
   copyText: clipboardWrite,
   deliverText: async (text, settings) => {
     if (!input || (linux && !linux.capabilities().automaticPaste)) { await clipboardWrite(text); return; }
-    // Direct typing and copy-only mode do not need to read the old clipboard.
+    // The Wayland direct-typing fallback manages its own temporary clipboard.
     const previous = settings.pasteMethod !== 'direct' && settings.pasteMethod !== 'none' && settings.clipboardHandling === 'restore'
       ? await clipboardRead() : '';
     if (settings.pasteMethod === 'direct') await input.command('type', Buffer.from(text, 'utf8').toString('base64'));
     else {
       await clipboardWrite(text);
       if (settings.pasteMethod !== 'none') {
-        await new Promise(resolve => setTimeout(resolve, 45));
-        await input.command('key', settings.pasteMethod);
-        if (settings.clipboardHandling === 'restore') {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 45));
+          await input.command('key', settings.pasteMethod);
           await new Promise(resolve => setTimeout(resolve, 160));
-          await clipboardWrite(previous);
+        } finally {
+          if (settings.clipboardHandling === 'restore') await clipboardWrite(previous);
         }
       }
     }
@@ -56,7 +63,19 @@ export const desktop: DesktopIntegration = {
     await linux?.start();
   },
   watchRelease: async key => { if (native) await native.command('watch', windowsShortcutKeys(key)); },
-  muteAudio: async () => { if (!native) throw new Error('Отключение системного звука пока доступно только в Windows.'); await native.command('mute'); },
-  restoreAudio: async () => { if (native && !closing) await native.command('restore'); },
-  close: async () => { closing = true; await native?.close(); },
+  muteAudio: async () => {
+    if (native) { await native.command('mute'); return; }
+    if (linux && linux.capabilities().muteAudio) { await linux.command('mute'); return; }
+    throw new Error('Отключение системного звука недоступно в вашей системе.');
+  },
+  restoreAudio: async () => {
+    if (closing) return;
+    if (native) await native.command('restore');
+    else if (linux && linux.capabilities().muteAudio) await linux.command('restore').catch(() => {});
+  },
+  close: async () => {
+    if (linux) await linux.command('restore').catch(console.error);
+    closing = true;
+    await native?.close();
+  },
 };

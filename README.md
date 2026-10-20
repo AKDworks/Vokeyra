@@ -95,7 +95,7 @@ SenseVoice weights use the [FunASR Model License](https://github.com/modelscope/
 | Internet | Required to download the application and selected models |
 | Storage | Application files plus 27 MB–1.52 GB for each installed model |
 
-macOS, ARM, and 32-bit builds are not available. On Linux, global shortcuts and automatic insertion require X11. Wayland support is limited to button recording and manual clipboard insertion and has not yet been verified on a native Wayland desktop. System audio muting is currently Windows-only.
+macOS, ARM, and 32-bit builds are not available. On Linux, both X11 and Wayland sessions are supported (with automatic insertion via wtype/ydotool, global shortcuts via swhkd or compositor keybindings, and audio muting via PulseAudio / PipeWire; see the [Linux guide](docs/LINUX.md) for details).
 
 ## Privacy and local data
 

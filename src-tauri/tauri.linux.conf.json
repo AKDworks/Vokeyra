@@ -7,7 +7,7 @@
     "linux": {
       "deb": {
         "depends": ["xdotool", "wl-clipboard", "libgomp1", "libstdc++6", "gstreamer1.0-plugins-base", "gstreamer1.0-plugins-good", "gstreamer1.0-plugins-bad", "gstreamer1.0-pulseaudio"],
-        "recommends": ["libayatana-appindicator3-1"],
+        "recommends": ["libayatana-appindicator3-1", "wtype", "ydotool"],
         "section": "utils"
       },
       "appimage": { "bundleMediaFramework": true },

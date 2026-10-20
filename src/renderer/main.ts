@@ -235,6 +235,9 @@ function renderHistory(): void { historyView.render(snapshot.history, snapshot.d
 function renderModels(): void { if (snapshot) modelsView.update(snapshot, downloads, mode !== 'idle' || capturingHotkey || updateInProgress || maintenanceInProgress); }
 async function toggleRecording(fromHold = false): Promise<void> {
   if (updateInProgress || maintenanceInProgress || microphonePermissionBusy || confirmationOpen || capturingHotkey || mode === 'starting' || mode === 'transcribing') return;
+  if (!snapshot) {
+    try { await refresh(); } catch { return; }
+  }
   const token = ++generation;
   try {
     if (mode === 'idle') {

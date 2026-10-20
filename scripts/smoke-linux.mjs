@@ -66,7 +66,7 @@ const capture = join(temporary, 'capture.cjs'), result = join(temporary, 'typed.
 await writeFile(capture, "const fs=require('node:fs');process.stdin.once('data',data=>{fs.writeFileSync(process.argv[2],data);process.exit();});");
 const terminal = spawn('xterm', ['-name', 'VokeyraLinuxSmoke', '-e', node, capture, result], { stdio: 'ignore', env: { ...process.env, LC_ALL: 'C.UTF-8' } });
 try {
-  const { stdout } = await run('xdotool', ['search', '--sync', '--classname', 'VokeyraLinuxSmoke'], { timeout: 10_000 });
+  const { stdout } = await run('xdotool', ['search', '--sync', '--onlyvisible', '--classname', 'VokeyraLinuxSmoke'], { timeout: 10_000 });
   await run('xdotool', ['windowfocus', '--sync', stdout.trim().split('\n')[0]]);
   const native = new LinuxNative(); await native.start();
   const text = 'Vokeyra Linux input';

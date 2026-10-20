@@ -7,6 +7,10 @@ description = "Private, local speech to text for your desktop"
 authors = ["AKDworks"]
 build = "build.rs"
 
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

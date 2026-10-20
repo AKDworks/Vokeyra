@@ -25,8 +25,8 @@ async function setup() {
 }
 async function install(manager: ModelManager, bytes: Buffer, id = 'whisper-tiny') {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(Uint8Array.from(bytes))));
-  manager.start(id);
-  await vi.waitFor(() => expect(manager.downloads.get(id)?.phase).toMatch(/complete|error/));
+  await manager.start(id);
+  expect(manager.downloads.get(id)?.phase).toMatch(/complete|error/);
 }
 afterEach(async () => {
   vi.unstubAllGlobals();

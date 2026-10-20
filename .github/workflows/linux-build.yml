@@ -25,7 +25,7 @@ jobs:
           sudo apt-get install -y build-essential cmake pkg-config curl wget file \
             libwebkit2gtk-4.1-dev libssl-dev libxdo-dev libayatana-appindicator3-dev \
             librsvg2-dev patchelf libfuse2 rpm xdotool xclip wl-clipboard xvfb xterm \
-            webkit2gtk-driver pulseaudio pulseaudio-utils espeak dbus-x11 \
+            webkit2gtk-driver pulseaudio pulseaudio-utils espeak dbus-x11 imagemagick \
             gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-pulseaudio
       - name: Set up Rust
         run: rustup toolchain install stable --profile minimal --no-self-update
@@ -76,7 +76,7 @@ jobs:
         run: sudo apt-get install -y "$(realpath src-tauri/target/release/bundle/deb/*.deb)"
       - name: Check installed UI, virtual microphone, transcription and AppImage
         timeout-minutes: 10
-        run: dbus-run-session -- xvfb-run -a node scripts/smoke-linux-ui.mjs
+        run: xvfb-run -a dbus-run-session -- node scripts/smoke-linux-ui.mjs
       - name: Upload desktop verification reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -117,7 +117,7 @@ jobs:
       - name: Install Fedora desktop-test dependencies
         run: |
           dnf install -y git shadow-utils util-linux dbus-x11 xorg-x11-server-Xvfb \
-            xorg-x11-xauth pulseaudio pulseaudio-utils espeak-ng webkit2gtk4.1-devel
+            xorg-x11-xauth pulseaudio pulseaudio-utils espeak-ng webkit2gtk4.1-devel ImageMagick
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
@@ -154,7 +154,7 @@ jobs:
         run: |
           runuser -u vokeyra-test -- env HOME=/home/vokeyra-test \
             XDG_RUNTIME_DIR=/tmp/vokeyra-test-runtime \
-            dbus-run-session -- xvfb-run -a bash -eu -o pipefail <<'SH'
+            xvfb-run -a dbus-run-session -- bash -eu -o pipefail <<'SH'
           profile=$(mktemp -d "$GITHUB_WORKSPACE/.tmp/rpm-startup-XXXXXX")
           printf '%s\n' '{"launchAtStartup":false,"showTrayIcon":false,"appLanguage":"en"}' > "$profile/settings.json"
           status=0
@@ -176,7 +176,7 @@ jobs:
           fi
           runuser -u vokeyra-test -- env HOME=/home/vokeyra-test \
             XDG_RUNTIME_DIR=/tmp/vokeyra-test-runtime VOKEYRA_TEST_ESPEAK=espeak-ng \
-            dbus-run-session -- xvfb-run -a /usr/lib/Vokeyra/desktop/node \
+            xvfb-run -a dbus-run-session -- /usr/lib/Vokeyra/desktop/node \
             scripts/smoke-linux-ui.mjs --package rpm
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
