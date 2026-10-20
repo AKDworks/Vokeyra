@@ -76,7 +76,7 @@ jobs:
         run: sudo apt-get install -y "$(realpath src-tauri/target/release/bundle/deb/*.deb)"
       - name: Check installed UI, virtual microphone, transcription and AppImage
         timeout-minutes: 10
-        run: dbus-run-session -- xvfb-run -a node scripts/smoke-linux-ui.mjs
+        run: xvfb-run -a dbus-run-session -- node scripts/smoke-linux-ui.mjs
       - name: Upload desktop verification reports
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -154,7 +154,7 @@ jobs:
         run: |
           runuser -u vokeyra-test -- env HOME=/home/vokeyra-test \
             XDG_RUNTIME_DIR=/tmp/vokeyra-test-runtime \
-            dbus-run-session -- xvfb-run -a bash -eu -o pipefail <<'SH'
+            xvfb-run -a dbus-run-session -- bash -eu -o pipefail <<'SH'
           profile=$(mktemp -d "$GITHUB_WORKSPACE/.tmp/rpm-startup-XXXXXX")
           printf '%s\n' '{"launchAtStartup":false,"showTrayIcon":false,"appLanguage":"en"}' > "$profile/settings.json"
           status=0
@@ -176,7 +176,7 @@ jobs:
           fi
           runuser -u vokeyra-test -- env HOME=/home/vokeyra-test \
             XDG_RUNTIME_DIR=/tmp/vokeyra-test-runtime VOKEYRA_TEST_ESPEAK=espeak-ng \
-            dbus-run-session -- xvfb-run -a /usr/lib/Vokeyra/desktop/node \
+            xvfb-run -a dbus-run-session -- /usr/lib/Vokeyra/desktop/node \
             scripts/smoke-linux-ui.mjs --package rpm
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()

@@ -76,9 +76,12 @@ try {
       let diagnostics = '', session;
       for (const output of [driver.stdout, driver.stderr]) output.on('data', data => { diagnostics = (diagnostics + data).slice(-24000); console.error(`[${format}] ${String(data).trim()}`); });
       async function request(method, path, body, timeout = 30000) {
-        const response = await fetch(`http://127.0.0.1:${port}${path}`, {
-          method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeout),
-        });
+        let response;
+        try {
+          response = await fetch(`http://127.0.0.1:${port}${path}`, {
+            method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeout),
+          });
+        } catch (error) { throw new Error(`WebDriver request failed: ${method} ${path}`, { cause: error }); }
         const payload = await response.json();
         if (!response.ok || payload.value?.error) throw new Error(`WebDriver ${path}: ${JSON.stringify(payload.value)}`);
         return payload.value;
@@ -144,10 +147,13 @@ try {
         assert.match(input.label, /Vokeyra/i, 'Use the actual PulseAudio test microphone, not a WebKit mock.');
         console.log(`${format}: microphone available: ${input.label}; starting recording.`);
         await clickVisible('#record');
+        console.log(`${format}: start button click returned.`);
         await until(() => execute(() => /Recording|Идёт запись/.test(document.getElementById('record-status').textContent)), 'recording start');
+        console.log(`${format}: recording started; capturing synthetic speech.`);
         await delay(6500);
         assert.match(await execute(() => document.getElementById('record-status').textContent), /Recording|Идёт запись/);
         await clickVisible('#record');
+        console.log(`${format}: stop button click returned; waiting for transcription.`);
         const recorded = await until(async () => {
           const state = await execute(() => window.vokeyra.snapshot());
           const entry = state.history[0];
@@ -155,6 +161,7 @@ try {
           return !state.busy && entry?.status === 'complete' ? entry : null;
         }, 'Whisper transcription', 120000);
         assert.match(recorded.text, /hello|world|test|speech|recognition/i, 'Recognize words from the synthetic speech.');
+        console.log(`${format}: transcription completed: ${recorded.text}`);
         const samples = await execute(async id => {
           const bytes = await window.vokeyra.historyAudio(id); const view = new DataView(bytes);
           let sum = 0; for (let offset = 44; offset + 1 < bytes.byteLength; offset += 2) sum += (view.getInt16(offset, true) / 32768) ** 2;
@@ -162,8 +169,10 @@ try {
         }, recorded.id);
         assert.ok(samples.bytes > 16000 * 2, 'History must contain captured audio.');
         assert.ok(samples.rms > .001, `Captured microphone audio must not be silent: ${samples.rms}`);
+        console.log(`${format}: captured audio verified; saving settings.`);
         await execute(() => window.vokeyra.saveSettings({ modelUnloadDelay: '2m' }));
         assert.equal(JSON.parse(await readFile(join(profile, 'settings.json'), 'utf8')).modelUnloadDelay, '2m');
+        console.log(`${format}: settings saved; capturing screenshot.`);
         await writeFile(join(reports, `${format}.png`), Buffer.from(await request('GET', `/session/${session}/screenshot`), 'base64'));
         result.packages.push({ format, application, microphone: input, recording: samples, transcript: recorded.text, settingsSaved: true, versionVerified: true });
         console.log(`${format}: installed application → PulseAudio microphone → AudioWorklet → Whisper → history passed: ${recorded.text}`);
