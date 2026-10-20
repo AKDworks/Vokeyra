@@ -1,0 +1,39 @@
+# Maintainer: AKDworks <https://github.com/AKDworks/Vokeyra>
+# Contributor: pirkov
+
+pkgname=vokeyra-bin
+pkgver=0.3.2
+pkgrel=1
+pkgdesc="Private, local speech to text for your desktop (prebuilt binary)"
+arch=('x86_64')
+url="https://github.com/AKDworks/Vokeyra"
+license=('MIT')
+provides=('vokeyra')
+conflicts=('vokeyra')
+depends=(
+  'webkit2gtk-4.1'
+  'gtk3'
+  'wl-clipboard'
+  'openssl'
+  'libayatana-appindicator'
+)
+optdepends=(
+  'wtype: automatic typing and paste on Wayland (wlroots/Hyprland/Sway/Niri)'
+  'ydotool: automatic typing and paste on Wayland (GNOME/KDE)'
+  'dotool: pipe-based input emulation on Wayland'
+  'xdotool: automatic typing and paste on X11'
+  'pipewire-pulse: system audio muting support'
+  'pulseaudio: system audio muting support'
+  'swhkd: global hotkey daemon for Wayland'
+)
+source=(
+  "https://github.com/AKDworks/Vokeyra/releases/download/v${pkgver}/vokeyra_${pkgver}_amd64.deb"
+)
+sha256sums=(
+  'SKIP'
+)
+
+package() {
+  tar -xf data.tar.* -C "${pkgdir}"
+  install -Dm644 "${pkgdir}/usr/lib/Vokeyra/desktop/licenses/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
