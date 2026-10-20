@@ -96,8 +96,8 @@ const safeId = (value: unknown): string => {
 function validateSettings(value: unknown, base = defaultPreferences) {
   const result = validatePreferences(value, base);
   const caps = desktop.capabilities();
-  if (!caps.muteAudio && result.muteWhileRecording) throw new Error('Отключение системного звука пока доступно только в Windows.');
-  if (!caps.pushToTalk && result.pushToTalk) throw new Error('Удержание клавиши в Linux пока доступно только в X11.');
+  if (!caps.muteAudio && result.muteWhileRecording) throw new Error('Отключение системного звука недоступно в вашей системе.');
+  if (!caps.pushToTalk && result.pushToTalk) throw new Error('Удержание клавиши недоступно в вашей системе.');
   return result;
 }
 function whisperExecutable(): string {
@@ -144,6 +144,7 @@ async function persistSettings(next: Settings, allowUnavailableHotkey = false): 
   if (needsRegistration) {
     nextHotkeyRegistered = await desktop.registerShortcut(next.hotkey, toggle);
     if (!nextHotkeyRegistered && !allowUnavailableHotkey && desktop.capabilities().globalShortcut) {
+      if (desktop.capabilities().session === 'wayland') throw new Error('Не удалось применить горячую клавишу. Проверьте конфигурацию и права swhkd.');
       throw new Error('Сочетание занято другим приложением. Выберите другое.');
     }
   }
@@ -357,6 +358,17 @@ async function start(): Promise<void> {
   const root = config.dataPath;
   settingsPath = join(root, 'settings.json');
   recordingsPath = join(root, 'transcription-tmp');
+  // Discover Linux tools before validating saved preferences against capabilities.
+  const initializeDesktop = desktop.initialize(() => {
+    shortcutDown = false;
+    if (heldRecording) { heldRecording = false; emit('recording:hold', false); }
+  }, error => {
+    shortcutDown = false;
+    recording?.controller.abort();
+    emit('recording:cancel-request');
+    if (!quitting) emit('service:error', error.message);
+  });
+  await initializeDesktop;
   try {
     const saved = await readJson(settingsPath) as Settings;
     const migrated = { ...saved, ...(typeof saved.historyLimit === 'number' ? { historyLimit: Math.min(100, saved.historyLimit) } : {}) };
@@ -368,15 +380,6 @@ async function start(): Promise<void> {
   models = new ModelManager(join(root, 'models'), join(root, 'models.json'), state => {
     emit('models:progress', state);
   });
-  const initializeDesktop = desktop.initialize(() => {
-    shortcutDown = false;
-    if (heldRecording) { heldRecording = false; emit('recording:hold', false); }
-  }, error => {
-    shortcutDown = false;
-    recording?.controller.abort();
-    emit('recording:cancel-request');
-    if (!quitting) emit('service:error', error.message);
-  });
   const initializeHistory = history.init().then(() => history.applyPolicy(settings.historyLimit, settings.historyRetention));
   const initializeModels = models.init(join(config.resourcePath, 'models.json'));
   // Only our dedicated scratch directory is cleared, never arbitrary temp files.
@@ -385,6 +388,7 @@ async function start(): Promise<void> {
   const coreReady = Promise.all([initializeDesktop, initializeHistory, initializeModels, initializeScratch]);
   registerIpc();
   hostEvents.on('shortcut:toggle', () => {
+    if (capturingShortcut || quitting) return;
     shortcutDown = false;
     heldRecording = false;
     emit('recording:toggle');

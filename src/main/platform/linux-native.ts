@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
-import { access, constants, writeFile } from 'node:fs/promises';
-import { delimiter, join } from 'node:path';
+import { access, constants, readFile, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { delimiter, isAbsolute, join, resolve } from 'node:path';
 import type { DesktopCapabilities } from '../../shared/contracts';
 
 type CommandOptions = { input?: string; quiet?: boolean; timeout?: number };
@@ -49,16 +50,19 @@ export function formatSwhkdConfig(hotkey: string, executablePath: string): strin
   const key = keyMap[rawKey] ?? rawKey.toLowerCase();
   const mods = parts.map(p => modMap[p] ?? p.toLowerCase());
   const combo = [...mods, key].join(' + ');
-  const exe = executablePath.includes(' ') ? `"${executablePath}"` : executablePath;
-  return `# Vokeyra hotkey configuration for swhkd\n${combo}\n\t${exe} --press\n\n@${combo}\n\t${exe} --release\n`;
+  const release = [...mods, `@${key}`].join(' + ');
+  // swhkd executes its command through a shell, unlike the Linux tool calls below.
+  const exe = `'${executablePath.replaceAll("'", "'\\''")}'`;
+  return `# Vokeyra hotkey configuration for swhkd\n${combo}\n\t${exe} --press\n\n${release}\n\t${exe} --release\n`;
 }
 
 export class LinuxNative {
   readonly session = process.env.XDG_SESSION_TYPE === 'wayland' || !!process.env.WAYLAND_DISPLAY ? 'wayland' : process.env.DISPLAY ? 'x11' : 'unknown';
   private tools: Record<string, string | undefined> = {};
-  private mutedByUs = false;
+  private mutedSink?: { tool: string; id: string; serial?: string };
 
-  constructor(private run: LinuxCommand = runLinuxCommand, private find = executable) {}
+  constructor(private run: LinuxCommand = runLinuxCommand, private find = executable,
+    private readText = (path: string): Promise<string> => readFile(path, 'utf8')) {}
 
   capabilities(): DesktopCapabilities {
     const x11 = this.session === 'x11';
@@ -72,7 +76,7 @@ export class LinuxNative {
     if (wayland) {
       if (!hasWaylandPaste) {
         warning = 'В Wayland запись запускается кнопкой. Результат копируется в буфер обмена.';
-      } else if (!this.tools.swhkd) {
+      } else {
         warning = 'В Wayland для глобальной клавиши настройте swhkd или хоткей композитора на vokeyra --toggle.';
       }
     } else if (x11 && !this.tools.xdotool) {
@@ -114,56 +118,73 @@ export class LinuxNative {
   }
 
   async syncHotkey(hotkey: string, dataPath?: string, executablePath?: string): Promise<boolean> {
-    if (this.session === 'wayland' && dataPath && executablePath) {
+    if (this.session !== 'wayland' || !dataPath || !executablePath) return false;
+    const generated = join(dataPath, 'swhkdrc');
+    await writeFile(generated, formatSwhkdConfig(hotkey, executablePath), 'utf8');
+    if (!this.tools.swhkd) return false;
+    const pids = await this.run('pgrep', ['-x', 'swhkd']).catch(() => '');
+    for (const pid of pids.trim().split(/\s+/).filter(value => /^\d+$/.test(value))) {
       try {
-        await writeFile(join(dataPath, 'swhkdrc'), formatSwhkdConfig(hotkey, executablePath), 'utf8');
-      } catch (err) {
-        console.error('Failed to write swhkdrc:', err);
-      }
-      if (this.tools.swhkd) {
-        await this.run('pkill', ['-HUP', '-x', 'swhkd']).catch(() => '');
+        const argv = (await this.readText(`/proc/${pid}/cmdline`)).split('\0');
+        const flag = argv.findIndex(arg => arg === '-c' || arg === '--config');
+        const explicit = flag >= 0 ? argv[flag + 1] : argv.find(arg => arg.startsWith('--config='))?.slice(9);
+        const candidates = explicit ? [explicit] : [join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'swhkd', 'swhkdrc'), '/etc/swhkd/swhkdrc'];
+        let connected = false;
+        for (const path of candidates) {
+          if (!path || !isAbsolute(path)) continue;
+          let contents: string;
+          try { contents = await this.readText(path); } catch { continue; }
+          connected = resolve(path) === resolve(generated) || contents.split(/\r?\n/).some(line => line.trim() === `include ${generated}`);
+          break; // Only the first existing default config is used by swhkd.
+        }
+        if (!connected) continue;
+        await this.run('kill', ['-HUP', pid]);
         return true;
-      }
+      } catch { /* Missing configuration, stopped daemon, or insufficient permission. */ }
     }
-    return Boolean(this.tools.swhkd);
+    return false;
   }
 
   async command(command: 'key' | 'type' | 'mute' | 'restore', argument = ''): Promise<string> {
     if (command === 'mute') {
+      if (this.mutedSink) return '';
       if (this.tools.pactl) {
-        const state = await this.run(this.tools.pactl, ['get-sink-mute', '@DEFAULT_SINK@']).catch(() => '');
-        if (state.toLowerCase().includes('yes')) {
-          this.mutedByUs = false;
-        } else {
-          this.mutedByUs = true;
-          await this.run(this.tools.pactl, ['set-sink-mute', '@DEFAULT_SINK@', '1']);
-        }
+        const id = (await this.run(this.tools.pactl, ['get-default-sink'])).trim();
+        if (!id || id.startsWith('@')) throw new Error('Не удалось определить устройство вывода звука.');
+        const state = await this.run(this.tools.pactl, ['get-sink-mute', id]);
+        if (!/^Mute:\s*(yes|no)\s*$/i.test(state.trim())) throw new Error('Не удалось определить состояние звука.');
+        if (/\byes\b/i.test(state)) return '';
+        this.mutedSink = { tool: this.tools.pactl, id };
+        await this.run(this.tools.pactl, ['set-sink-mute', id, '1']);
         return '';
       }
       if (this.tools.wpctl) {
-        const state = await this.run(this.tools.wpctl, ['get-volume', '@DEFAULT_AUDIO_SINK@']).catch(() => '');
-        if (state.includes('[MUTED]')) {
-          this.mutedByUs = false;
-        } else {
-          this.mutedByUs = true;
-          await this.run(this.tools.wpctl, ['set-mute', '@DEFAULT_AUDIO_SINK@', '1']);
-        }
+        const info = await this.run(this.tools.wpctl, ['inspect', '@DEFAULT_AUDIO_SINK@']);
+        const id = info.match(/^id\s+(\d+),/m)?.[1];
+        const serial = info.match(/object\.serial\s*=\s*"(\d+)"/)?.[1];
+        if (!id || !serial) throw new Error('Не удалось определить устройство вывода звука.');
+        const state = await this.run(this.tools.wpctl, ['get-volume', id]);
+        if (!state.startsWith('Volume:')) throw new Error('Не удалось определить состояние звука.');
+        if (state.includes('[MUTED]')) return '';
+        this.mutedSink = { tool: this.tools.wpctl, id, serial };
+        await this.run(this.tools.wpctl, ['set-mute', id, '1']);
         return '';
       }
       throw new Error('Отключение системного звука недоступно в вашей системе.');
     }
 
     if (command === 'restore') {
-      if (!this.mutedByUs) return '';
-      this.mutedByUs = false;
-      if (this.tools.pactl) {
-        await this.run(this.tools.pactl, ['set-sink-mute', '@DEFAULT_SINK@', '0']);
-        return '';
+      const sink = this.mutedSink;
+      if (!sink) return '';
+      if (sink.serial) {
+        const info = await this.run(sink.tool, ['inspect', sink.id]);
+        if (info.match(/object\.serial\s*=\s*"(\d+)"/)?.[1] !== sink.serial) {
+          this.mutedSink = undefined;
+          return ''; // PipeWire may reuse the numeric ID after a device disconnects.
+        }
       }
-      if (this.tools.wpctl) {
-        await this.run(this.tools.wpctl, ['set-mute', '@DEFAULT_AUDIO_SINK@', '0']);
-        return '';
-      }
+      await this.run(sink.tool, [sink.serial ? 'set-mute' : 'set-sink-mute', sink.id, '0']);
+      this.mutedSink = undefined; // Keep the lease if restoration fails, so shutdown can retry.
       return '';
     }
 
@@ -204,12 +225,13 @@ export class LinuxNative {
 
         if (this.tools.ydotool || this.tools.dotool) {
           const prev = await this.clipboardRead(() => Promise.resolve('')).catch(() => '');
-          await this.clipboardWrite(text, () => Promise.resolve());
-          await new Promise(resolve => setTimeout(resolve, 45));
-          await this.command('key', 'ctrl-v');
-          if (prev) {
+          try {
+            await this.clipboardWrite(text, () => Promise.resolve());
+            await new Promise(resolve => setTimeout(resolve, 45));
+            await this.command('key', 'ctrl-v');
             await new Promise(resolve => setTimeout(resolve, 160));
-            await this.clipboardWrite(prev, () => Promise.resolve()).catch(() => {});
+          } finally {
+            await this.clipboardWrite(prev, () => Promise.resolve());
           }
           return '';
         }

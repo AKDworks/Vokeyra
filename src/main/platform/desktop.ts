@@ -37,18 +37,19 @@ export const desktop: DesktopIntegration = {
   copyText: clipboardWrite,
   deliverText: async (text, settings) => {
     if (!input || (linux && !linux.capabilities().automaticPaste)) { await clipboardWrite(text); return; }
-    // Direct typing and copy-only mode do not need to read the old clipboard.
+    // The Wayland direct-typing fallback manages its own temporary clipboard.
     const previous = settings.pasteMethod !== 'direct' && settings.pasteMethod !== 'none' && settings.clipboardHandling === 'restore'
       ? await clipboardRead() : '';
     if (settings.pasteMethod === 'direct') await input.command('type', Buffer.from(text, 'utf8').toString('base64'));
     else {
       await clipboardWrite(text);
       if (settings.pasteMethod !== 'none') {
-        await new Promise(resolve => setTimeout(resolve, 45));
-        await input.command('key', settings.pasteMethod);
-        if (settings.clipboardHandling === 'restore') {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 45));
+          await input.command('key', settings.pasteMethod);
           await new Promise(resolve => setTimeout(resolve, 160));
-          await clipboardWrite(previous);
+        } finally {
+          if (settings.clipboardHandling === 'restore') await clipboardWrite(previous);
         }
       }
     }
@@ -72,5 +73,9 @@ export const desktop: DesktopIntegration = {
     if (native) await native.command('restore');
     else if (linux && linux.capabilities().muteAudio) await linux.command('restore').catch(() => {});
   },
-  close: async () => { closing = true; await native?.close(); },
+  close: async () => {
+    if (linux) await linux.command('restore').catch(console.error);
+    closing = true;
+    await native?.close();
+  },
 };
