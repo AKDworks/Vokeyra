@@ -2,7 +2,7 @@
 # Contributor: pirkov
 
 pkgname=vokeyra-bin
-pkgver=0.3.2
+pkgver=0.3.3
 pkgrel=1
 pkgdesc="Private, local speech to text for your desktop (prebuilt binary)"
 arch=('x86_64')

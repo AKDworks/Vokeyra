@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const fixture = vi.hoisted(() => ({
-  config: { dataPath: '', resourcePath: '', version: '0.3.2' },
+  config: { dataPath: '', resourcePath: '', version: '0.3.3' },
   ready: false,
   routes: new Map<string, (...args: any[]) => any>(),
   start: undefined as undefined | (() => Promise<void>),
