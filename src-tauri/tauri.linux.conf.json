@@ -21,7 +21,8 @@
           "gstreamer1.0-plugins-good",
           "gstreamer1.0-plugins-bad",
           "gstreamer1.0-pulseaudio",
-          "libgtk-layer-shell0"
+          "libgtk-layer-shell0",
+          "pulseaudio-utils"
         ],
         "recommends": [
           "libayatana-appindicator3-1",
@@ -47,7 +48,8 @@
           "gstreamer1-plugins-bad-free",
           "pipewire-gstreamer",
           "polkit",
-          "gtk-layer-shell"
+          "gtk-layer-shell",
+          "pulseaudio-utils"
         ],
         "release": "1",
         "recommends": [

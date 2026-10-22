@@ -14,6 +14,7 @@ depends=(
   'webkit2gtk-4.1'
   'gtk3'
   'wl-clipboard'
+  'libpulse'
   'openssl'
   'libayatana-appindicator'
   'gtk-layer-shell'

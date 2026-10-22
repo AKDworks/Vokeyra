@@ -300,7 +300,8 @@ function renderLinux(info: LinuxDesktopInfo): void {
 function renderHistory(): void { historyView.render(snapshot.history, snapshot.desktop.platform === 'linux'); }
 function renderModels(): void { if (snapshot) modelsView.update(snapshot, downloads, mode !== 'idle' || capturingHotkey || updateInProgress || maintenanceInProgress); }
 async function toggleRecording(fromHold = false): Promise<void> {
-  if (updateInProgress || maintenanceInProgress || microphonePermissionBusy || confirmationOpen || capturingHotkey || mode === 'starting' || mode === 'transcribing') return;
+  if (updateInProgress || maintenanceInProgress || microphonePermissionBusy || confirmationOpen || capturingHotkey || mode === 'transcribing') return;
+  if (mode === 'starting') { void cancelRecording(); return; }
   if (!snapshot) {
     try { await refresh(); } catch { return; }
   }
@@ -316,11 +317,18 @@ async function toggleRecording(fromHold = false): Promise<void> {
       if (token !== generation) return;
       await api.prepareRecordingAudio(sessionId);
       if (token !== generation) return;
-      recorder = new MicrophoneRecorder();
       startedAt = Date.now();
-      await recorder.start(() => { void toggleRecording(); }, level => {
-        if (token === generation) api.recordingLevel(sessionId, level, (Date.now() - startedAt) / 1000);
-      }, snapshot.settings);
+      if (snapshot.desktop.platform === 'linux') {
+        // WebKitGTK cannot open the microphone while its window is hidden,
+        // which is the normal tray/autostart state on Wayland. The service
+        // captures through PipeWire/PulseAudio instead.
+        await api.startAudioCapture(sessionId);
+      } else {
+        recorder = new MicrophoneRecorder();
+        await recorder.start(() => { void toggleRecording(); }, level => {
+          if (token === generation) api.recordingLevel(sessionId, level, (Date.now() - startedAt) / 1000);
+        }, snapshot.settings);
+      }
       if (token !== generation) return;
       mode = 'recording'; updateControls();
       startedAt = Date.now();
@@ -330,7 +338,12 @@ async function toggleRecording(fromHold = false): Promise<void> {
       }, 500);
     } else {
       mode = 'transcribing'; clearInterval(recordingTimer); updateControls();
-      const wav = await recorder!.stop(); recorder = undefined;
+      let wav: ArrayBuffer;
+      if (snapshot.desktop.platform === 'linux' && !recorder) {
+        wav = await api.stopAudioCapture(sessionId);
+      } else {
+        wav = await recorder!.stop(); recorder = undefined;
+      }
       if (token !== generation) return;
       await api.finishRecordingAudio(sessionId);
       await playFeedback('stop', snapshot.settings).catch(report);
@@ -371,6 +384,7 @@ async function cancelRecording(): Promise<void> {
 }
 el('cancel-recording').onclick = () => { void cancelRecording(); };
 api.onCancel(() => { void cancelRecording(); });
+api.onRecordingLimit(() => { if (mode === 'recording') void toggleRecording(); });
 api.onDownload(state => {
   downloads.set(state.id, state);
   if (snapshot) renderModels();

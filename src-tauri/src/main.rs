@@ -224,6 +224,8 @@ async fn service_request(
         "recording:transcribe",
         "recording:cancel",
         "recording:level",
+        "recording:capture-start",
+        "recording:capture-stop",
         "clipboard:copy",
         "shortcut:begin-capture",
         "shortcut:end-capture",

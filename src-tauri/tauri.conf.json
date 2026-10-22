@@ -21,7 +21,8 @@
         "maximizable": false,
         "visible": false,
         "backgroundColor": "#292a29",
-        "useHttpsScheme": true
+        "useHttpsScheme": true,
+        "backgroundThrottling": "disabled"
       },
       {
         "label": "overlay",

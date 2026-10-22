@@ -15,6 +15,7 @@ import { encodeWav, validateWav } from '../shared/wav';
 import type { Settings, Snapshot } from '../shared/contracts';
 import { HistoryStore } from './history';
 import { RecordingOverlay } from './tauri-overlay';
+import { LinuxAudioCapture } from './platform/linux-audio';
 import { defaultPreferences, validatePreferences } from '../shared/preferences';
 import { prepareTranscript } from '../shared/transcript';
 import type { AppUpdateState } from '../shared/contracts';
@@ -39,6 +40,7 @@ let captureTimer: ReturnType<typeof setTimeout> | undefined;
 let historyCleanupTimer: ReturnType<typeof setInterval> | undefined;
 let hotkeyRegistered = false;
 let recording: { id: string; modelId: string; controller: AbortController; transcribing: boolean } | null = null;
+let audioCapture: LinuxAudioCapture | undefined;
 let recordingGeneration = 0;
 let settingsPath: string;
 let recordingsPath: string;
@@ -279,6 +281,39 @@ function registerIpc(): void {
     if (!recording || recording.id !== id || recording.transcribing || typeof level !== 'number' || !Number.isFinite(level) || typeof seconds !== 'number' || !Number.isFinite(seconds)) return;
     overlay?.update({ phase: 'recording', level: Math.max(0, Math.min(1, level)), seconds: Math.max(0, Math.min(300, seconds)) });
   });
+  // WebKitGTK suspends getUserMedia when the main window is hidden, so Linux
+  // capture runs in the service through PipeWire/PulseAudio instead.
+  handle('recording:capture-start', async (id: unknown) => {
+    const job = recording;
+    if (process.platform !== 'linux') throw new Error('Запись вне WebView доступна только в Linux.');
+    if (!job || job.id !== id || job.transcribing || job.controller.signal.aborted) throw new Error('Запись уже завершена.');
+    if (audioCapture) await audioCapture.stop(settings.inputChannel).catch(() => {});
+    const capture = new LinuxAudioCapture();
+    audioCapture = capture;
+    try {
+      await capture.start({
+        microphoneId: settings.microphoneId,
+        inputChannel: settings.inputChannel,
+        onLevel: (level, seconds) => {
+          if (recording === job && !job.transcribing) {
+            overlay?.update({ phase: 'recording', level, seconds });
+          }
+        },
+        onLimit: () => emit('recording:limit'),
+      });
+    } catch (error) {
+      if (audioCapture === capture) audioCapture = undefined;
+      await capture.stop(settings.inputChannel).catch(() => {});
+      throw error;
+    }
+  });
+  handle('recording:capture-stop', async (id: unknown) => {
+    const job = recording;
+    if (!job || job.id !== id || !audioCapture) throw new Error('Запись уже завершена.');
+    const capture = audioCapture;
+    audioCapture = undefined;
+    return Buffer.from(await capture.stop(settings.inputChannel)).toString('base64');
+  });
   async function beginRecording(): Promise<string> {
     await startupReady;
     idle();
@@ -308,8 +343,13 @@ function registerIpc(): void {
     ++recordingGeneration;
     recording?.controller.abort();
     if (!recording?.transcribing) recording = null;
+    const capture = audioCapture;
+    audioCapture = undefined;
     overlay?.hide();
-    await desktop.restoreAudio();
+    await Promise.allSettled([
+      capture?.stop(settings.inputChannel),
+      desktop.restoreAudio(),
+    ]);
   });
   async function transcribeRecording(id: unknown, wav: unknown, entryId?: string): Promise<string> {
     const job = recording;
@@ -446,7 +486,12 @@ async function cleanupApplication(): Promise<void> {
   overlay?.hide();
 
   recording?.controller.abort();
-  await Promise.allSettled([models?.shutdown(), engines.unloadAll(), desktop.close(), ...transcriptionTasks]);
+  const capture = audioCapture;
+  audioCapture = undefined;
+  await Promise.allSettled([
+    capture?.stop('all'),
+    models?.shutdown(), engines.unloadAll(), desktop.close(), ...transcriptionTasks,
+  ]);
   if (recordingsPath) await rm(recordingsPath, { recursive: true, force: true }).catch(() => {});
   cleaned = true;
 }

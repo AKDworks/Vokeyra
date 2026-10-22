@@ -179,6 +179,8 @@ export interface DesktopApi {
   recheckIntegrations(): Promise<void>;
   openHotkeyConfig(): Promise<void>;
   recordingLevel(id: string, level: number, seconds: number): void;
+  startAudioCapture(id: string): Promise<void>;
+  stopAudioCapture(id: string): Promise<ArrayBuffer>;
   deleteHistory(id: string): Promise<void>;
   favoriteHistory(id: string): Promise<void>;
   historyAudio(id: string): Promise<ArrayBuffer>;
@@ -191,6 +193,7 @@ export interface DesktopApi {
   openModelLicense(id: string): Promise<void>;
   startUpdate(): Promise<AppUpdateState>;
   onCancel(callback: () => void): () => void;
+  onRecordingLimit(callback: () => void): () => void;
   onShortcutCaptureEnded(callback: () => void): () => void;
   onToggle(callback: () => void): () => void;
   onHold(callback: (pressed: boolean) => void): () => void;
