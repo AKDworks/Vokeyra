@@ -11,6 +11,10 @@ vi.mock('../src/main/platform/linux-native', () => ({ LinuxNative: class {
   capabilities = () => ({ automaticPaste: true });
   clipboardRead = async () => mocks.clipboard;
   clipboardWrite = async (value: string) => { mocks.clipboard = value; };
+  restoreClipboard = async (dictated: string, previous: string) => {
+    if (mocks.clipboard !== dictated) return false;
+    mocks.clipboard = previous; return true;
+  };
 } }));
 import { desktop } from '../src/main/platform/desktop';
 
@@ -36,4 +40,24 @@ it('keeps the dictated text in the clipboard when the user selected keep', async
   mocks.command.mockRejectedValue(new Error('Input helper unavailable'));
   await expect(desktop.deliverText('dictation', { ...defaultPreferences, pasteMethod: 'ctrl-v', clipboardHandling: 'keep' })).rejects.toThrow();
   expect(mocks.clipboard).toBe('dictation');
+});
+
+it('does not overwrite clipboard contents the user changed while pasting', async () => {
+  mocks.clipboard = 'previous text';
+  let reads = 0;
+  mocks.host.mockImplementation(async (method: string, value?: string) => {
+    if (method === 'clipboard:read') { reads += 1; return reads === 1 ? 'previous text' : 'user replacement'; }
+    if (method === 'clipboard:write') mocks.clipboard = value!;
+  });
+  mocks.command.mockImplementation(async () => { mocks.clipboard = 'user replacement'; return ''; });
+  await desktop.deliverText('dictation', { ...defaultPreferences, pasteMethod: 'ctrl-v', clipboardHandling: 'restore' });
+  expect(mocks.clipboard).toBe('user replacement');
+});
+
+it('inserts once and leaves the text in history when the input helper fails', async () => {
+  mocks.clipboard = 'previous';
+  mocks.command.mockRejectedValue(new Error('Input helper unavailable'));
+  await expect(desktop.deliverText('dictation', { ...defaultPreferences, pasteMethod: 'ctrl-v', clipboardHandling: 'keep' }))
+    .rejects.toThrow('Input helper unavailable');
+  expect(mocks.command).toHaveBeenCalledTimes(1);
 });

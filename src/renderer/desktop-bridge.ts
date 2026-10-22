@@ -28,6 +28,7 @@ const api: DesktopApi = {
   transcribe: (id, wav) => call('recording:transcribe', id, encode(wav)),
   cancelRecording: () => call('recording:cancel'), copyText: text => call('clipboard:copy', text),
   beginShortcutCapture: () => call('shortcut:begin-capture'), endShortcutCapture: () => call('shortcut:end-capture'),
+  recheckIntegrations: () => call('app:recheck-integrations'), openHotkeyConfig: () => call('shortcut:open-config'),
   recordingLevel: (id, level, seconds) => { void call('recording:level', id, level, seconds).catch(console.error); },
   deleteHistory: id => call('history:delete', id), favoriteHistory: id => call('history:favorite', id),
   historyAudio: async id => { const data = atob(await call<string>('history:audio', id)); return Uint8Array.from(data, char => char.charCodeAt(0)).buffer; },

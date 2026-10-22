@@ -28,6 +28,25 @@
         <section id="general" class="tab">
           <h2>Общее</h2>
           <p id="platform-note" class="muted" role="status" hidden></p>
+          <div id="linux-integrations" hidden>
+            <h2>Linux</h2>
+            <p id="linux-summary" class="muted"></p>
+            <div id="linux-integration-list" class="integration-list"></div>
+            <div class="integration-actions">
+              <button id="refresh-integrations" class="secondary" type="button">Проверить снова</button>
+              <button id="open-hotkey-config" class="subtle" type="button" hidden>Открыть swhkdrc</button>
+            </div>
+            <details id="linux-hint-box" class="linux-hint" hidden>
+              <summary>Горячая клавиша композитора</summary>
+              <pre id="linux-hint"></pre>
+              <p id="linux-hint-note" class="muted"></p>
+            </details>
+            <details id="linux-overlay-hint-box" class="linux-hint" hidden>
+              <summary>Правило для плавающего индикатора</summary>
+              <pre id="linux-overlay-hint"></pre>
+              <p class="muted">Правило относится только к окну с заголовком Vokeyra Indicator.</p>
+            </details>
+          </div>
           <div class="settings-group">
             <div class="setting-row"><div class="label-with-info"><label for="hotkey">Горячая клавиша транскрипции</label><button type="button" class="info" data-icon="info" aria-label="О горячей клавише" data-help="Начинает и завершает запись голоса из любого приложения выбранным сочетанием клавиш."></button></div><div class="row-controls"><button id="hotkey" class="key-button" aria-label="Назначить горячую клавишу">Ctrl + Shift + Space</button><button id="cancel-hotkey" class="subtle" hidden>Отмена</button></div></div>
             <div class="setting-row"><div class="label-with-info"><span id="push-to-talk-label">Удерживать для записи</span><button type="button" class="info" data-icon="info" aria-label="О настройке «Удерживать для записи»" data-help="Записывает голос только пока вы удерживаете назначенную горячую клавишу."></button></div><button id="push-to-talk" type="button" class="switch" role="switch" aria-checked="false" aria-labelledby="push-to-talk-label"><span></span></button></div>

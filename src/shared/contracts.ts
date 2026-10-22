@@ -101,6 +101,36 @@ export interface AppUpdateState {
   percent?: number;
   message?: string;
 }
+export type LinuxCompositor = 'niri' | 'kde' | 'gnome' | 'sway' | 'hyprland' | 'unknown';
+export type LinuxIntegrationId = 'hotkey' | 'pushToTalk' | 'paste' | 'overlay';
+export type LinuxIntegrationState = 'active' | 'ready' | 'setup' | 'unavailable' | 'error';
+export interface LinuxIntegrationStatus {
+  id: LinuxIntegrationId;
+  state: LinuxIntegrationState;
+  /** Human-readable reason. Interface translations live in renderer/i18n.ts. */
+  detail: string;
+  /** Optional recommended next step. */
+  action?: string;
+}
+export interface LinuxOverlayInfo {
+  mode: 'layer-shell' | 'window' | 'disabled';
+  layerShell: boolean;
+  reason?: string;
+  title?: string;
+}
+export interface LinuxDesktopInfo {
+  compositor: LinuxCompositor;
+  compositorName: string;
+  session: 'x11' | 'wayland' | 'unknown';
+  /** Whether the desktop portal actually exposes GlobalShortcuts. */
+  portal: 'available' | 'unavailable' | 'unknown';
+  overlay: LinuxOverlayInfo;
+  pasteBackend?: 'wtype' | 'ydotool' | 'dotool' | 'xdotool';
+  hotkeyBackend?: 'x11' | 'swhkd' | 'compositor';
+  /** Copy-ready snippet for the detected compositor, commands only. */
+  hotkeyHint?: string;
+  integrations: LinuxIntegrationStatus[];
+}
 export interface DesktopCapabilities {
   platform: 'windows' | 'linux' | 'other';
   session: 'native' | 'x11' | 'wayland' | 'unknown';
@@ -110,6 +140,7 @@ export interface DesktopCapabilities {
   automaticPaste: boolean;
   directTyping: boolean;
   warning?: string;
+  linux?: LinuxDesktopInfo;
 }
 export interface Snapshot {
   desktop: DesktopCapabilities;
@@ -145,6 +176,8 @@ export interface DesktopApi {
   copyText(text: string): Promise<void>;
   beginShortcutCapture(): Promise<void>;
   endShortcutCapture(): Promise<void>;
+  recheckIntegrations(): Promise<void>;
+  openHotkeyConfig(): Promise<void>;
   recordingLevel(id: string, level: number, seconds: number): void;
   deleteHistory(id: string): Promise<void>;
   favoriteHistory(id: string): Promise<void>;

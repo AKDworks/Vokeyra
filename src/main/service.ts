@@ -143,10 +143,13 @@ async function persistSettings(next: Settings, allowUnavailableHotkey = false): 
   let nextHotkeyRegistered = hotkeyRegistered;
   if (needsRegistration) {
     nextHotkeyRegistered = await desktop.registerShortcut(next.hotkey, toggle);
-    if (!nextHotkeyRegistered && !allowUnavailableHotkey && desktop.capabilities().globalShortcut) {
-      if (desktop.capabilities().session === 'wayland') {
-        if (next.hotkey !== previousHotkey) throw new Error('Не удалось применить горячую клавишу. Проверьте конфигурацию и права swhkd.');
-      } else throw new Error('Сочетание занято другим приложением. Выберите другое.');
+    const capabilities = desktop.capabilities();
+    // On Wayland the generated swhkdrc and the compositor binding are applied
+    // outside Vokeyra. A missing daemon must not block saving the shortcut;
+    // the Linux diagnostics section explains what still needs setup.
+    if (!nextHotkeyRegistered && !allowUnavailableHotkey && capabilities.globalShortcut
+      && capabilities.session !== 'wayland') {
+      throw new Error('Сочетание занято другим приложением. Выберите другое.');
     }
   }
   try { await atomicJson(settingsPath, next); }
@@ -181,6 +184,8 @@ function registerIpc(): void {
     captureTimer = setTimeout(endShortcutCapture, 30_000);
   }, true);
   handle('shortcut:end-capture', endShortcutCapture, true);
+  handle('shortcut:open-config', () => desktop.openHotkeyConfig());
+  handle('app:recheck-integrations', async () => { await desktop.refreshCapabilities(); }, true);
   handle('settings:save', async (value: unknown) => {
     idle();
     const patch = validateSettings(value, settings);
@@ -310,6 +315,7 @@ function registerIpc(): void {
     const job = recording;
     if (!job || job.id !== id || job.transcribing) throw new Error('Запись уже завершена.');
     let directory: string | undefined;
+    let completed = false;
     job.transcribing = true;
     overlay?.update({ phase: 'transcribing', level: 0, seconds: 0 });
     try {
@@ -329,6 +335,9 @@ function registerIpc(): void {
       const text = prepareTranscript(rawText, settings);
       job.controller.signal.throwIfAborted();
       await history.update(entryId, { text: text.slice(0, 100_000), modelName: installed.model.name, status: 'complete' });
+      // Transcription is complete even if inserting the text fails; keep the
+      // entry available instead of reporting the whole recording as failed.
+      completed = true;
       if (text) {
         if (fromHistory) await desktop.copyText(text);
         else await desktop.deliverText(text, settings);
@@ -336,7 +345,7 @@ function registerIpc(): void {
       await history.applyPolicy(settings.historyLimit, settings.historyRetention);
       return text;
     } catch (error) {
-      if (entryId) await history.update(entryId, { status: 'failed' }).catch(console.error);
+      if (entryId && !completed) await history.update(entryId, { status: 'failed' }).catch(console.error);
       throw error;
     } finally {
       if (directory) await rm(directory, { recursive: true, force: true }).catch(() => {});
@@ -373,7 +382,16 @@ async function start(): Promise<void> {
   try {
     const saved = await readJson(settingsPath) as Settings;
     const migrated = { ...saved, ...(typeof saved.historyLimit === 'number' ? { historyLimit: Math.min(100, saved.historyLimit) } : {}) };
-    settings = { ...defaults, ...validateSettings(migrated),
+    // A profile may move between environments (for example Windows → niri).
+    // Keep portable preferences, but disable features that this session cannot
+    // provide instead of discarding the whole settings file.
+    const caps = desktop.capabilities();
+    const compatible = {
+      ...migrated,
+      ...(caps.pushToTalk ? {} : { pushToTalk: false }),
+      ...(caps.muteAudio ? {} : { muteWhileRecording: false }),
+    };
+    settings = { ...defaults, ...validateSettings(compatible),
       selectedModelId: typeof saved.selectedModelId === 'string' ? safeId(saved.selectedModelId) : null };
   } catch {}
   engines.setIdleTimeout(modelIdleTimeout(settings.modelUnloadDelay));

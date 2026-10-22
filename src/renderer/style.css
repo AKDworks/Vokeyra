@@ -301,3 +301,24 @@ main:has(#general:not([hidden])), main:has(#models:not([hidden])), main:has(#his
 ::-webkit-scrollbar-thumb:hover { background-color: #686e62; }
 ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
 ::-webkit-scrollbar-corner { background: transparent; }
+
+/* Linux integration diagnostics */
+.integration-list { border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+.integration-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; padding: 10px 14px; align-items: start; }
+.integration-row + .integration-row { border-top: 1px solid var(--line); }
+.integration-copy { min-width: 0; }
+.integration-name { font-weight: 500; }
+.integration-detail { color: var(--muted); font-size: 14px; line-height: 1.45; margin-top: 2px; }
+.integration-action { color: #c3d6c7; font-size: 14px; line-height: 1.45; margin-top: 4px; }
+.integration-badge { border: 1px solid #55594f; border-radius: 4px; padding: 1px 7px; line-height: 20px; color: var(--muted); white-space: nowrap; }
+.integration-badge.active { color: #b7d9c0; border-color: #526c59; }
+.integration-badge.ready { color: #b7d9c0; border-color: #526c59; }
+.integration-badge.setup { color: #ddcfa6; border-color: #6d6247; }
+.integration-badge.error { color: #e1aaa2; border-color: #6e4b46; }
+.integration-badge.unavailable { color: var(--muted); }
+.integration-actions { display: flex; align-items: center; gap: 12px; margin-top: 9px; }
+.integration-actions .secondary { padding: 5px 10px; }
+.linux-hint { margin-top: 9px; color: var(--muted); }
+.linux-hint summary { cursor: pointer; color: #c3c6c0; }
+.linux-hint pre { margin: 8px 0; padding: 10px 12px; overflow-x: auto; border: 1px solid var(--line); border-radius: 6px;
+  background: #232422; color: #d6ddd2; font: 13px/1.5 "JetBrains Mono", "DejaVu Sans Mono", monospace; user-select: text; }

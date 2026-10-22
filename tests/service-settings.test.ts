@@ -52,8 +52,9 @@ it('saves other settings even when the Wayland shortcut is not configured', asyn
   expect(JSON.parse(await readFile(join(fixture.config.dataPath, 'settings.json'), 'utf8')).historyLimit).toBe(7);
 });
 
-it('reports an unapplied shortcut change without replacing the saved shortcut', async () => {
-  const previous = (await fixture.routes.get('app:snapshot')!()).settings.hotkey;
-  await expect(fixture.routes.get('settings:save')!({ hotkey: 'F8' })).rejects.toThrow('swhkd');
-  expect((await fixture.routes.get('app:snapshot')!()).settings.hotkey).toBe(previous);
+it('saves a shortcut change on Wayland even when an external daemon is not connected', async () => {
+  await fixture.routes.get('settings:save')!({ hotkey: 'F8' });
+  const snapshot = await fixture.routes.get('app:snapshot')!();
+  expect(snapshot.settings.hotkey).toBe('F8');
+  expect(snapshot.hotkeyRegistered).toBe(false);
 });

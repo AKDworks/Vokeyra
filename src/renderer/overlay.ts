@@ -5,7 +5,6 @@ const levels = bars.map(() => 0);
 function render(state: RecordingIndicator): void {
   const english = state.appLanguage === 'en';
   document.documentElement.lang = english ? 'en' : 'ru';
-  document.title = english ? 'Vokeyra — recording' : 'Vokeyra — запись';
   document.querySelector('.indicator')!.setAttribute('aria-label', english ? 'Dictation indicator' : 'Индикатор диктовки');
   document.getElementById('cancel')!.setAttribute('aria-label', english ? 'Cancel recording' : 'Отменить запись');
   document.body.dataset.phase = state.phase;

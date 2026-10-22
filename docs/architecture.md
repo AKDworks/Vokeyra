@@ -12,7 +12,7 @@ src/
     hotkey.ts          # Валидация одиночных клавиш и сочетаний
   renderer/
     index.html         # Пять боковых вкладок, без UI-фреймворка
-    overlay.html       # Отдельный индикатор записи
+    overlay.html       # Индикатор записи для Windows (WebView)
     overlay.ts
     overlay.css
     main.ts            # UI-состояние и вызовы ограниченного API
@@ -35,6 +35,7 @@ src/
       desktop.ts       # Системная горячая клавиша и clipboard
 resources/models.json
 src-tauri/             # Окна, системные команды, трей и подписанные обновления
+  src/overlay.rs       # Нативный GTK/Cairo индикатор: layer-shell + fallback-окно
 scripts/               # Сборка Tauri, dev runner, WebView smoke
 tests/                 # Поведение каталога, загрузок и аудио
 ```
@@ -81,7 +82,7 @@ Renderer управляет состояниями `idle → starting → record
 
 GigaAM CTC работает через ONNX Runtime, а GigaAM RNNT, Parakeet TDT и Moonshine — через sherpa-onnx. Все движки получают тот же входной WAV, запускаются в изолированных процессах Node.js и не настраиваются пользователем вручную.
 
-Системная интеграция вынесена в `DesktopIntegration`. Автовставка должна получить отдельную реализацию для Windows/macOS/Linux и явный контракт сохранения фокуса. Реализованы clipboard, глобальное нажатие/отпускание клавиши и временное отключение системного звука Windows. Различия разрешений macOS, Wayland/X11, архитектур CPU и пакетов runtime потребуют платформенной работы; переносимость пока архитектурная, эти ОС не тестировались.
+Системная интеграция вынесена в `DesktopIntegration`. В Linux используются отдельные адаптеры для X11 и Wayland: глобальная клавиша X11 регистрируется Tauri, в Wayland — через привязки композитора или swhkd; вставка идёт через xdotool, wtype, ydotool или dotool. `LinuxNative` проверяет не только наличие исполняемых файлов, но и демон и сокет ydotool, доступ к `/dev/uinput` и подключение swhkd, а `DesktopCapabilities.linux` передаёт в интерфейс причины и рекомендуемые действия. Индикатор записи в Linux — нативное окно GTK/Cairo (без WebView). В native Wayland оно по возможности становится layer-surface через runtime-загружаемый `gtk-layer-shell`; при отсутствии протокола остаётся компактным плавающим окном с фиксированным заголовком и transient-родителем. Windows продолжает использовать WebView-индикатор. Остальные различия разрешений macOS, Wayland/X11, архитектур CPU и пакетов runtime потребуют платформенной работы; macOS не тестировалась.
 
 ## Установка и обновление модели
 

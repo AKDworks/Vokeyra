@@ -25,7 +25,7 @@
       },
       {
         "label": "overlay",
-        "title": "Vokeyra",
+        "title": "Vokeyra Indicator",
         "url": "overlay.html",
         "theme": "Dark",
         "width": 248,
@@ -40,7 +40,11 @@
         "focusable": false,
         "skipTaskbar": true,
         "alwaysOnTop": true,
-        "useHttpsScheme": true
+        "useHttpsScheme": true,
+        "minWidth": 248,
+        "minHeight": 58,
+        "maxWidth": 248,
+        "maxHeight": 58
       }
     ],
     "security": {

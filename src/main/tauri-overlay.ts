@@ -1,4 +1,4 @@
-import { emit, host } from './host';
+import { host } from './host';
 import type { RecordingIndicator } from '../shared/contracts';
 
 export class RecordingOverlay {
@@ -13,6 +13,8 @@ export class RecordingOverlay {
   update(state: RecordingIndicator): void { this.state = { ...state, appLanguage: this.state.appLanguage }; this.publish(); }
   private publish(): void {
     this.state.overlayMode = this.mode === 'minimal' ? 'minimal' : 'realtime';
-    emit('overlay:state', this.state, 'overlay');
+    // Rust renders a native indicator on Linux and forwards the same state to
+    // the WebView overlay on other platforms.
+    void host('overlay:update', this.state).catch(console.error);
   }
 }

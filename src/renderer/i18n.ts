@@ -169,6 +169,60 @@ const ruToEn: Record<string, string> = {
   'Устройство вывода не отвечает.': 'The output device is not responding.', 'Не удалось воспроизвести сигнал.': 'Could not play the sound.',
   'Файл загружен не полностью. Повторите загрузку.': 'The file was not downloaded completely. Try again.',
   'SHA-256 не совпал. Повторите загрузку.': 'SHA-256 verification failed. Try the download again.',
+  'Неизвестный сеанс': 'Unknown session',
+  'Неизвестный композитор': 'Unknown compositor',
+  'GlobalShortcuts portal доступен': 'GlobalShortcuts portal is available',
+  'GlobalShortcuts portal недоступен': 'GlobalShortcuts portal is unavailable',
+  'Portal не проверен': 'Portal not checked',
+  'Горячая клавиша': 'Keyboard shortcut', 'Вставка текста': 'Text insertion', 'Индикатор записи': 'Recording indicator',
+  'Работает': 'Working', 'Готово': 'Ready', 'Требуется настройка': 'Setup required', 'Недоступно': 'Unavailable', 'Ошибка': 'Error',
+  'Глобальная клавиша работает через X11.': 'The global shortcut works through X11.',
+  'swhkd подключён к Vokeyra.': 'swhkd is connected to Vokeyra.',
+  'Портал GlobalShortcuts обнаружен, но Vokeyra пока использует привязку композитора.': 'The GlobalShortcuts portal is present, but Vokeyra currently uses a compositor binding.',
+  'Wayland не разрешает приложению перехватывать клавиши. Назначьте команду в настройках композитора.': 'Wayland does not let the app capture keys. Bind the command in your compositor settings.',
+  'Добавьте vokeyra --toggle как пользовательскую горячую клавишу или подключите swhkd.': 'Add vokeyra --toggle as a custom shortcut, or connect swhkd.',
+  'Удержание поддерживается в X11.': 'Push-to-talk is supported on X11.',
+  'Удержание работает через swhkd.': 'Push-to-talk works through swhkd.',
+  'niri не передаёт приложениям событие отпускания клавиши.': 'niri does not send key-release events to applications.',
+  'Используйте режим переключения или swhkd.': 'Use toggle mode or swhkd.',
+  'Для удержания нужен swhkd с обработкой отпускания.': 'Push-to-talk needs swhkd with release handling.',
+  'Настройте swhkd или используйте режим переключения.': 'Configure swhkd or use toggle mode.',
+  'Композитор умеет отдельные привязки нажатия и отпускания.': 'The compositor supports separate press and release bindings.',
+  'swhkd найден, но не подключён к Vokeyra.': 'swhkd was found but is not connected to Vokeyra.',
+  'Добавьте include сгенерированного swhkdrc в конфигурацию swhkd.': 'Add an include of the generated swhkdrc to the swhkd configuration.',
+  'ydotool установлен, но ydotoold не запущен или его сокет недоступен.': 'ydotool is installed, but ydotoold is not running or its socket is unavailable.',
+  'ydotool установлен, но ydotoold не запущен.': 'ydotool is installed, but ydotoold is not running.',
+  'Запустите ydotoold или проверьте YDOTOOL_SOCKET.': 'Start ydotoold or check YDOTOOL_SOCKET.',
+  'dotool не имеет доступа к /dev/uinput и /dev/input.': 'dotool cannot access /dev/uinput and /dev/input.',
+  'dotool не имеет доступа к устройствам ввода.': 'dotool cannot access input devices.',
+  'Проверьте права на /dev/uinput и /dev/input.': 'Check permissions for /dev/uinput and /dev/input.',
+  'Добавьте vokeyra --press и vokeyra --release.': 'Add vokeyra --press and vokeyra --release.',
+  'Вставка работает через xdotool.': 'Insertion works through xdotool.',
+  'Для вставки в X11 нужен xdotool.': 'X11 insertion needs xdotool.',
+  'Установите xdotool.': 'Install xdotool.',
+  'Система ввода не определена.': 'The input system was not detected.',
+  'Запустите Vokeyra в сеансе X11 или Wayland.': 'Start Vokeyra in an X11 or Wayland session.',
+  'Инструмент ввода перестал работать.': 'The input tool stopped working.',
+  'Проверьте компонент и повторите проверку. Текст сохранён в истории.': 'Check the component and run the check again. The text is saved in history.',
+  'Найден wtype. Автоматическая проверка не отправляет клавиши в активное окно.': 'wtype was found. The check does not send keys to your active window.',
+  'Найден ydotool с работающим демоном.': 'ydotool was found with a running daemon.',
+  'Найден dotool.': 'dotool was found.',
+  'Не найден рабочий инструмент ввода текста.': 'No working text-input tool was found.',
+  'Установите wtype, ydotool с ydotoold или dotool.': 'Install wtype, ydotool with ydotoold, or dotool.',
+  'Индикатор использует layer-shell и не участвует в раскладке.': 'The indicator uses layer-shell and does not take part in tiling.',
+  'Индикатор показан небольшим плавающим окном X11.': 'The indicator is shown as a small floating X11 window.',
+  'Индикатор показан обычным окном: композитор не предоставил layer-shell.': 'The indicator is a regular window because the compositor did not provide layer-shell.',
+  'Библиотека gtk-layer-shell не найдена.': 'The gtk-layer-shell library was not found.',
+  'Композитор не поддерживает протокол layer-shell.': 'The compositor does not support the layer-shell protocol.',
+  'Layer-shell отключён переменной VOKEYRA_DISABLE_LAYER_SHELL.': 'Layer-shell is disabled by VOKEYRA_DISABLE_LAYER_SHELL.',
+  'Поверхность индикатора была создана до подключения layer-shell.': 'The indicator surface was created before layer-shell could be attached.',
+  'Окно индикатора недоступно в GTK.': 'The indicator window is unavailable in GTK.',
+  'Добавьте правило для окна с заголовком Vokeyra Indicator.': 'Add a rule for the window titled Vokeyra Indicator.',
+  'niri передаёт только нажатие, поэтому используйте vokeyra --toggle. Для удержания нужен swhkd.': 'niri sends only key presses, so use vokeyra --toggle. Push-to-talk requires swhkd.',
+  'Для удержания добавьте отдельные привязки vokeyra --press и vokeyra --release.': 'For push-to-talk add separate vokeyra --press and vokeyra --release bindings.',
+  'Добавьте vokeyra --toggle как пользовательскую горячую клавишу в настройках системы.': 'Add vokeyra --toggle as a custom shortcut in system settings.',
+  'Файл конфигурации создаётся только в сеансе Wayland.': 'The configuration file is created only in a Wayland session.',
+  'Сначала сохраните горячую клавишу, чтобы создать swhkdrc.': 'Save a shortcut first to create swhkdrc.',
 };
 
 const enToRu = Object.fromEntries(Object.entries(ruToEn).map(([ru, en]) => [en, ru]));
@@ -201,7 +255,8 @@ function translateCore(value: string): string {
       .replace(/^(.+), активная модель$/, '$1, active model')
       .replace(/^(Точность|Скорость): (.+), (\d+) из 5$/, (_value, label: string, description: string, score: string) => `${ruToEn[label] ?? label}: ${ruToEn[description] ?? description}, ${score} of 5`)
       .replace(/^Удалить (.+)$/, 'Delete $1')
-      .replace(/^Скачать (.+)$/, 'Download $1');
+      .replace(/^Скачать (.+)$/, 'Download $1')
+      .replace(/^Не удалось вставить текст: (.+)\. Текст сохранён в истории\.$/, 'Could not insert text: $1. The text is saved in history.');
   }
   return value
     .replace(/^Keep latest (\d+)$/, 'Хранить последние $1')
@@ -222,7 +277,8 @@ function translateCore(value: string): string {
     .replace(/^(.+), active model$/, '$1, активная модель')
     .replace(/^(Accuracy|Speed): (.+), (\d+) of 5$/, (_value, label: string, description: string, score: string) => `${enToRu[label] ?? label}: ${enToRu[description] ?? description}, ${score} из 5`)
     .replace(/^Delete (.+)$/, 'Удалить $1')
-    .replace(/^Download (.+)$/, 'Скачать $1');
+    .replace(/^Download (.+)$/, 'Скачать $1')
+    .replace(/^Could not insert text: (.+)\. The text is saved in history\.$/, 'Не удалось вставить текст: $1. Текст сохранён в истории.');
 }
 
 export function tr(value: string): string {
