@@ -37,6 +37,7 @@ export interface Model {
 }
 export interface Catalog { schemaVersion: 2; models: Model[] }
 export interface TextReplacement { from: string; to: string }
+export interface AudioSource { id: string; label: string }
 export interface Settings {
   appLanguage: 'ru' | 'en';
   hotkey: string;
@@ -181,6 +182,7 @@ export interface DesktopApi {
   recordingLevel(id: string, level: number, seconds: number): void;
   startAudioCapture(id: string): Promise<void>;
   stopAudioCapture(id: string): Promise<ArrayBuffer>;
+  listAudioSources(): Promise<AudioSource[]>;
   deleteHistory(id: string): Promise<void>;
   favoriteHistory(id: string): Promise<void>;
   historyAudio(id: string): Promise<ArrayBuffer>;
@@ -194,6 +196,8 @@ export interface DesktopApi {
   startUpdate(): Promise<AppUpdateState>;
   onCancel(callback: () => void): () => void;
   onRecordingLimit(callback: () => void): () => void;
+  onCaptureFallback(callback: (message: string) => void): () => void;
+  onCaptureError(callback: (message: string) => void): () => void;
   onShortcutCaptureEnded(callback: () => void): () => void;
   onToggle(callback: () => void): () => void;
   onHold(callback: (pressed: boolean) => void): () => void;

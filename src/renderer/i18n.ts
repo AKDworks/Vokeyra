@@ -163,6 +163,7 @@ const ruToEn: Record<string, string> = {
   'Файл сторонних лицензий не найден. Переустановите Vokeyra.': 'The third-party notices file is missing. Reinstall Vokeyra.',
   'Устройство не поддерживает запись 16 кГц.': 'The device does not support 16 kHz recording.',
   'Микрофон не отвечает. Проверьте доступ и выбранное устройство.': 'The microphone is not responding. Check access and the selected device.',
+  'Выбранный микрофон недоступен. Запись идёт с устройства по умолчанию.': 'The selected microphone is unavailable. Recording uses the default device.',
   'Не удалось включить микрофон. Закройте другие программы, использующие его.': 'Could not start the microphone. Close other applications that are using it.',
   'Не удалось подготовить обработку микрофона.': 'Could not prepare microphone processing.',
   'У микрофона нет второго канала. Выберите первый или все каналы.': 'The microphone has no second channel. Select the first channel or all channels.',

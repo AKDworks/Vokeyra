@@ -15,7 +15,8 @@ import { encodeWav, validateWav } from '../shared/wav';
 import type { Settings, Snapshot } from '../shared/contracts';
 import { HistoryStore } from './history';
 import { RecordingOverlay } from './tauri-overlay';
-import { LinuxAudioCapture } from './platform/linux-audio';
+import { LinuxAudioCapture, listLinuxSources, needsMicrophoneMigration } from './platform/linux-audio';
+import { runLinuxCommand } from './platform/linux-native';
 import { defaultPreferences, validatePreferences } from '../shared/preferences';
 import { prepareTranscript } from '../shared/transcript';
 import type { AppUpdateState } from '../shared/contracts';
@@ -283,6 +284,7 @@ function registerIpc(): void {
   });
   // WebKitGTK suspends getUserMedia when the main window is hidden, so Linux
   // capture runs in the service through PipeWire/PulseAudio instead.
+  handle('audio:list-sources', () => process.platform === 'linux' ? listLinuxSources(runLinuxCommand) : Promise.resolve([]));
   handle('recording:capture-start', async (id: unknown) => {
     const job = recording;
     if (process.platform !== 'linux') throw new Error('Запись вне WebView доступна только в Linux.');
@@ -295,12 +297,26 @@ function registerIpc(): void {
         microphoneId: settings.microphoneId,
         inputChannel: settings.inputChannel,
         onLevel: (level, seconds) => {
-          if (recording === job && !job.transcribing) {
+          if (recording === job && !job.transcribing && audioCapture === capture) {
             overlay?.update({ phase: 'recording', level, seconds });
           }
         },
-        onLimit: () => emit('recording:limit'),
+        onLimit: () => { if (recording === job) emit('recording:limit'); },
+        onFallback: () => {
+          if (recording === job && audioCapture === capture) {
+            emit('recording:capture-fallback', 'Выбранный микрофон недоступен. Запись идёт с устройства по умолчанию.');
+          }
+        },
+        onError: error => {
+          if (recording === job && audioCapture === capture) {
+            emit('recording:capture-error', error.message);
+          }
+        },
       });
+      if (recording !== job || job.controller.signal.aborted || audioCapture !== capture) {
+        await capture.stop(settings.inputChannel).catch(() => {});
+        throw new Error('Запись отменена.');
+      }
     } catch (error) {
       if (audioCapture === capture) audioCapture = undefined;
       await capture.stop(settings.inputChannel).catch(() => {});
@@ -312,6 +328,11 @@ function registerIpc(): void {
     if (!job || job.id !== id || !audioCapture) throw new Error('Запись уже завершена.');
     const capture = audioCapture;
     audioCapture = undefined;
+    // Never return a partial WAV as a successful recording after parec died.
+    if (capture.error) {
+      await capture.stop(settings.inputChannel).catch(() => {});
+      throw capture.error;
+    }
     return Buffer.from(await capture.stop(settings.inputChannel)).toString('base64');
   });
   async function beginRecording(): Promise<string> {
@@ -433,6 +454,16 @@ async function start(): Promise<void> {
     };
     settings = { ...defaults, ...validateSettings(compatible),
       selectedModelId: typeof saved.selectedModelId === 'string' ? safeId(saved.selectedModelId) : null };
+    if (process.platform === 'linux') {
+      // Older versions stored opaque WebKit device ids. They cannot be passed
+      // to parec, so migrate an unusable selection to the system default and
+      // keep the rest of the profile intact.
+      const sources = await listLinuxSources(runLinuxCommand);
+      if (needsMicrophoneMigration(settings.microphoneId, sources)) {
+        settings = { ...settings, microphoneId: 'default' };
+        await atomicJson(settingsPath, settings);
+      }
+    }
   } catch {}
   engines.setIdleTimeout(modelIdleTimeout(settings.modelUnloadDelay));
   history = new HistoryStore(join(root, 'history.json'));

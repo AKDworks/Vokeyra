@@ -17,6 +17,11 @@ vi.mock('../src/main/host', async () => ({
   route: (name: string, handler: (...args: any[]) => any) => fixture.routes.set(name, handler),
   serve: (start: () => Promise<void>, shutdown: () => Promise<void>) => { fixture.start = start; fixture.shutdown = shutdown; },
 }));
+const audio = vi.hoisted(() => ({ sources: [{ id: 'alsa_input.usb-fifine', label: 'fifine Microphone' }] }));
+vi.mock('../src/main/platform/linux-audio', async () => {
+  const actual = await vi.importActual<typeof import('../src/main/platform/linux-audio')>('../src/main/platform/linux-audio');
+  return { ...actual, listLinuxSources: async () => audio.sources, LinuxAudioCapture: class {} };
+});
 vi.mock('../src/main/platform/desktop', () => ({ desktop: {
   capabilities: () => ({ platform: 'linux', session: 'wayland', globalShortcut: true, pushToTalk: false, muteAudio: false }),
   initialize: async () => {},
@@ -31,6 +36,7 @@ beforeAll(async () => {
   fixture.config.resourcePath = resolve('resources');
   await writeFile(join(fixture.config.dataPath, 'settings.json'), JSON.stringify({
     appLanguage: 'en', pushToTalk: true, muteWhileRecording: true, historyLimit: 9,
+    microphoneId: 'a'.repeat(64),
   }));
   await fixture.start!();
 });
@@ -43,5 +49,6 @@ it('keeps portable settings when a profile moves to an environment without push-
   const snapshot = await fixture.routes.get('app:snapshot')!();
   expect(snapshot.settings).toMatchObject({
     appLanguage: 'en', historyLimit: 9, pushToTalk: false, muteWhileRecording: false,
+    microphoneId: 'default',
   });
 });

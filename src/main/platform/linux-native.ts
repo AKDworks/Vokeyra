@@ -499,10 +499,17 @@ export class LinuxNative {
   }
 
   /** Restore the previous clipboard only while it still contains our text. */
-  async restoreClipboard(dictated: string, previous: string): Promise<boolean> {
-    const current = await this.clipboardRead(() => Promise.resolve('')).catch(() => undefined);
+  async restoreClipboard(dictated: string, previous: string,
+    read?: () => Promise<string>, write?: (text: string) => Promise<void>): Promise<boolean> {
+    // X11 has no wl-paste equivalent inside LinuxNative. Callers pass the host
+    // clipboard bridge for both operations; Wayland falls back to its own
+    // wl-clipboard tools when no bridge is supplied.
+    const current = read
+      ? await read().catch(() => undefined)
+      : await this.clipboardRead(() => Promise.resolve('')).catch(() => undefined);
     if (current === undefined || current !== dictated) return false;
-    await this.clipboardWrite(previous, () => Promise.resolve());
+    if (write) await write(previous);
+    else await this.clipboardWrite(previous, () => Promise.resolve());
     return true;
   }
 

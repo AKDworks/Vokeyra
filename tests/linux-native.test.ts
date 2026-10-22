@@ -337,6 +337,28 @@ describe('Linux integration', () => {
     expect(capabilities.linux?.integrations.find(item => item.id === 'hotkey')?.state).toBe('setup');
   });
 
+  it.each(['previous text', ''])('restores the X11 clipboard through the host bridge: %j', async previous => {
+    vi.stubEnv('XDG_SESSION_TYPE', 'x11'); vi.stubEnv('WAYLAND_DISPLAY', ''); vi.stubEnv('DISPLAY', ':1');
+    const run = vi.fn<LinuxCommand>();
+    const native = new LinuxNative(run, async () => undefined);
+    await native.start();
+    const write = vi.fn().mockResolvedValue(undefined);
+    expect(await native.restoreClipboard('dictated', previous, async () => 'dictated', write)).toBe(true);
+    expect(write).toHaveBeenCalledWith(previous);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('does not restore the X11 clipboard after the user changed it', async () => {
+    vi.stubEnv('XDG_SESSION_TYPE', 'x11'); vi.stubEnv('WAYLAND_DISPLAY', ''); vi.stubEnv('DISPLAY', ':1');
+    const run = vi.fn<LinuxCommand>();
+    const native = new LinuxNative(run, async () => undefined);
+    await native.start();
+    const write = vi.fn().mockResolvedValue(undefined);
+    await expect(native.restoreClipboard('dictated', 'previous', async () => 'new user text', write)).resolves.toBe(false);
+    expect(write).not.toHaveBeenCalled();
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it.each(['previous text', ''])('restores the clipboard after failed Wayland typing, including an empty clipboard: %j', async previous => {
     vi.stubEnv('XDG_SESSION_TYPE', 'wayland');
     let clipboard = previous;
