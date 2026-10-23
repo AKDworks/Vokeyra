@@ -37,6 +37,7 @@ export interface Model {
 }
 export interface Catalog { schemaVersion: 2; models: Model[] }
 export interface TextReplacement { from: string; to: string }
+export interface AudioSource { id: string; label: string }
 export interface Settings {
   appLanguage: 'ru' | 'en';
   hotkey: string;
@@ -101,6 +102,36 @@ export interface AppUpdateState {
   percent?: number;
   message?: string;
 }
+export type LinuxCompositor = 'niri' | 'kde' | 'gnome' | 'sway' | 'hyprland' | 'unknown';
+export type LinuxIntegrationId = 'hotkey' | 'pushToTalk' | 'paste' | 'overlay';
+export type LinuxIntegrationState = 'active' | 'ready' | 'setup' | 'unavailable' | 'error';
+export interface LinuxIntegrationStatus {
+  id: LinuxIntegrationId;
+  state: LinuxIntegrationState;
+  /** Human-readable reason. Interface translations live in renderer/i18n.ts. */
+  detail: string;
+  /** Optional recommended next step. */
+  action?: string;
+}
+export interface LinuxOverlayInfo {
+  mode: 'layer-shell' | 'window' | 'disabled';
+  layerShell: boolean;
+  reason?: string;
+  title?: string;
+}
+export interface LinuxDesktopInfo {
+  compositor: LinuxCompositor;
+  compositorName: string;
+  session: 'x11' | 'wayland' | 'unknown';
+  /** Whether the desktop portal actually exposes GlobalShortcuts. */
+  portal: 'available' | 'unavailable' | 'unknown';
+  overlay: LinuxOverlayInfo;
+  pasteBackend?: 'wtype' | 'ydotool' | 'dotool' | 'xdotool';
+  hotkeyBackend?: 'x11' | 'swhkd' | 'compositor';
+  /** Copy-ready snippet for the detected compositor, commands only. */
+  hotkeyHint?: string;
+  integrations: LinuxIntegrationStatus[];
+}
 export interface DesktopCapabilities {
   platform: 'windows' | 'linux' | 'other';
   session: 'native' | 'x11' | 'wayland' | 'unknown';
@@ -110,6 +141,7 @@ export interface DesktopCapabilities {
   automaticPaste: boolean;
   directTyping: boolean;
   warning?: string;
+  linux?: LinuxDesktopInfo;
 }
 export interface Snapshot {
   desktop: DesktopCapabilities;
@@ -145,7 +177,12 @@ export interface DesktopApi {
   copyText(text: string): Promise<void>;
   beginShortcutCapture(): Promise<void>;
   endShortcutCapture(): Promise<void>;
+  recheckIntegrations(): Promise<void>;
+  openHotkeyConfig(): Promise<void>;
   recordingLevel(id: string, level: number, seconds: number): void;
+  startAudioCapture(id: string): Promise<void>;
+  stopAudioCapture(id: string): Promise<ArrayBuffer>;
+  listAudioSources(): Promise<AudioSource[]>;
   deleteHistory(id: string): Promise<void>;
   favoriteHistory(id: string): Promise<void>;
   historyAudio(id: string): Promise<ArrayBuffer>;
@@ -158,6 +195,9 @@ export interface DesktopApi {
   openModelLicense(id: string): Promise<void>;
   startUpdate(): Promise<AppUpdateState>;
   onCancel(callback: () => void): () => void;
+  onRecordingLimit(callback: () => void): () => void;
+  onCaptureFallback(callback: (message: string) => void): () => void;
+  onCaptureError(callback: (message: string) => void): () => void;
   onShortcutCaptureEnded(callback: () => void): () => void;
   onToggle(callback: () => void): () => void;
   onHold(callback: (pressed: boolean) => void): () => void;

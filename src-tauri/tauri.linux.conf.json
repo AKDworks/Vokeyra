@@ -1,19 +1,61 @@
 {
   "bundle": {
-    "targets": ["deb", "appimage", "rpm"],
+    "targets": [
+      "deb",
+      "appimage",
+      "rpm"
+    ],
     "category": "Utility",
     "shortDescription": "Private, local speech to text",
-    "resources": { "../dist/desktop-linux/": "desktop/" },
+    "resources": {
+      "../dist/desktop-linux/": "desktop/"
+    },
     "linux": {
       "deb": {
-        "depends": ["xdotool", "wl-clipboard", "libgomp1", "libstdc++6", "gstreamer1.0-plugins-base", "gstreamer1.0-plugins-good", "gstreamer1.0-plugins-bad", "gstreamer1.0-pulseaudio"],
-        "recommends": ["libayatana-appindicator3-1", "wtype", "ydotool"],
+        "depends": [
+          "xdotool",
+          "wl-clipboard",
+          "libgomp1",
+          "libstdc++6",
+          "gstreamer1.0-plugins-base",
+          "gstreamer1.0-plugins-good",
+          "gstreamer1.0-plugins-bad",
+          "gstreamer1.0-pulseaudio",
+          "libgtk-layer-shell0",
+          "pulseaudio-utils"
+        ],
+        "recommends": [
+          "libayatana-appindicator3-1",
+          "wtype",
+          "ydotool"
+        ],
         "section": "utils"
       },
-      "appimage": { "bundleMediaFramework": true },
+      "appimage": {
+        "bundleMediaFramework": true
+      },
       "rpm": {
-        "depends": ["webkit2gtk4.1", "gtk3", "libappindicator-gtk3", "xdotool", "wl-clipboard", "libgomp", "libstdc++", "gstreamer1-plugins-base", "gstreamer1-plugins-good", "gstreamer1-plugins-bad-free", "pipewire-gstreamer", "polkit"],
-        "release": "1"
+        "depends": [
+          "webkit2gtk4.1",
+          "gtk3",
+          "libappindicator-gtk3",
+          "xdotool",
+          "wl-clipboard",
+          "libgomp",
+          "libstdc++",
+          "gstreamer1-plugins-base",
+          "gstreamer1-plugins-good",
+          "gstreamer1-plugins-bad-free",
+          "pipewire-gstreamer",
+          "polkit",
+          "gtk-layer-shell",
+          "pulseaudio-utils"
+        ],
+        "release": "1",
+        "recommends": [
+          "wtype",
+          "ydotool"
+        ]
       }
     }
   }

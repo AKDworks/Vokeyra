@@ -129,6 +129,10 @@ try {
         const snapshot = await execute(() => window.vokeyra.snapshot());
         assert.equal(snapshot.appVersion, version); assert.equal(snapshot.models.length, 19);
         assert.equal(snapshot.desktop.platform, 'linux'); assert.equal(snapshot.desktop.session, 'x11');
+        assert.equal(snapshot.desktop.linux?.session, 'x11');
+        assert.equal(snapshot.desktop.linux?.integrations.length, 4);
+        assert.equal(await execute(() => !document.getElementById('linux-integrations').hidden), true,
+          'Linux integration diagnostics must be visible on X11.');
         assert.equal(snapshot.hotkeyRegistered, true); assert.equal(snapshot.engineReady, true);
         assert.equal(await execute(() => document.getElementById('footer-version').textContent), `Vokeyra ${version}`);
         await clickVisible('nav button[data-tab="history"]');

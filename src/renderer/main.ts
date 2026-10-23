@@ -1,5 +1,5 @@
 import './desktop-bridge';
-import type { AppUpdateState, DownloadState, Preferences, Snapshot } from '../shared/contracts';
+import type { AppUpdateState, DownloadState, LinuxDesktopInfo, Preferences, Snapshot } from '../shared/contracts';
 import { MicrophoneRecorder } from './recorder';
 import { acceleratorFromEvent, prettyHotkey } from '../shared/hotkey';
 import { CustomSelect } from './custom-select';
@@ -104,7 +104,7 @@ const switchSettings: Array<[string, keyof Pick<Preferences, 'hideOnStartup' | '
 for (const [id, key] of switchSettings) el<HTMLButtonElement>(id).onclick = () => {
   void savePreferences({ [key]: !snapshot.settings[key] }).catch(report);
 };
-const soundSettings = new SoundSettings(savePreferences, report);
+const soundSettings = new SoundSettings(savePreferences, report, api);
 const microphoneAccess = new MicrophoneAccess(api, () => soundSettings.refreshDevices(false), requesting => {
   microphonePermissionBusy = requesting; updateControls();
 });
@@ -120,7 +120,7 @@ const historyView = new HistoryView(el('history-list'), api, refresh, async id =
 
 function notice(message: string, error = false): void {
   el('notice-text').textContent = message;
-  el('notice').hidden = true; // Retain diagnostics in code; no visible notifications for now.
+  el('notice').hidden = !message;
   el('notice').classList.toggle('error', error);
 }
 el('dismiss-notice').onclick = () => notice('');
@@ -175,17 +175,24 @@ function updateControls(): void {
     settingSelects.clipboardHandling.setDisabled(busy || capturingHotkey || !snapshot.desktop.automaticPaste);
     settingSelects.autoSubmit.setDisabled(busy || capturingHotkey || !snapshot.desktop.automaticPaste);
   }
+  const refreshIntegrations = document.getElementById('refresh-integrations') as HTMLButtonElement | null;
+  if (refreshIntegrations) refreshIntegrations.disabled = busy || capturingHotkey;
+  const openHotkeyConfig = document.getElementById('open-hotkey-config') as HTMLButtonElement | null;
+  if (openHotkeyConfig) openHotkeyConfig.disabled = busy || capturingHotkey;
   updateButton.disabled = updateInProgress || maintenanceInProgress;
   if (snapshot) renderModels();
 }
 async function refresh(fillSettings = false): Promise<void> {
   snapshot = await api.snapshot();
   setAppLanguage(snapshot.settings.appLanguage);
+  soundSettings.setPlatform(snapshot.desktop.platform);
   const manualRecording = el<HTMLDetailsElement>('manual-recording');
   manualRecording.hidden = snapshot.desktop.platform !== 'linux';
   if (!initialized && snapshot.desktop.platform === 'linux') manualRecording.open = true;
   el('platform-note').textContent = tr(snapshot.desktop.warning ?? '');
   el('platform-note').hidden = !snapshot.desktop.warning;
+  if (snapshot.desktop.linux) renderLinux(snapshot.desktop.linux);
+  else el('linux-integrations').hidden = true;
   el('push-to-talk').dataset.unavailable = String(!snapshot.desktop.pushToTalk);
   el('mute-recording').dataset.unavailable = String(!snapshot.desktop.muteAudio);
   for (const [id, available] of [['hotkey', snapshot.desktop.globalShortcut], ['push-to-talk', snapshot.desktop.pushToTalk], ['mute-recording', snapshot.desktop.muteAudio]] as const) {
@@ -221,8 +228,10 @@ async function refresh(fillSettings = false): Promise<void> {
   const selected = snapshot.models.find(item => item.model.id === snapshot.settings.selectedModelId && item.installed);
   el('selected-model').textContent = selected ? `${selected.installed!.model.name} · ${snapshot.settings.language === 'auto' ? 'Авто' : snapshot.settings.language.toUpperCase()}` : 'Модель не выбрана';
   if (!initialized) {
-    if (snapshot.desktop.warning) notice(snapshot.desktop.warning);
-    else if (!snapshot.hotkeyRegistered) notice('Горячая клавиша занята. Выберите другую на вкладке «Главное».', true);
+    // The Linux diagnostics section and platform note already show this
+    // explanation; reserve the notice bar for errors and status messages.
+    if (snapshot.desktop.warning && !snapshot.desktop.linux) notice(snapshot.desktop.warning);
+    else if (!snapshot.hotkeyRegistered && snapshot.desktop.session !== 'wayland') notice('Горячая клавиша занята. Выберите другую на вкладке «Главное».', true);
     else if (!selected) notice('Скачайте модель во вкладке «Модели» — она выберется автоматически.');
     else if (!snapshot.engineReady) notice('Встроенный движок модели недоступен. Переустановите Vokeyra.', true);
   }
@@ -231,10 +240,69 @@ async function refresh(fillSettings = false): Promise<void> {
   updateControls();
   renderHistory();
 }
+function renderLinux(info: LinuxDesktopInfo): void {
+  const container = el('linux-integrations');
+  container.hidden = false;
+  const session = info.session === 'wayland' ? 'Wayland' : info.session === 'x11' ? 'X11' : tr('Неизвестный сеанс');
+  const portal = info.portal === 'available' ? 'GlobalShortcuts portal доступен'
+    : info.portal === 'unavailable' ? 'GlobalShortcuts portal недоступен' : 'Portal не проверен';
+  el('linux-summary').textContent = `${info.compositorName} · ${session} · ${tr(portal)}`;
+  const names: Record<string, string> = {
+    hotkey: 'Горячая клавиша', pushToTalk: 'Удержание для записи',
+    paste: 'Вставка текста', overlay: 'Индикатор записи',
+  };
+  const states: Record<string, string> = {
+    active: 'Работает', ready: 'Готово', setup: 'Требуется настройка',
+    unavailable: 'Недоступно', error: 'Ошибка',
+  };
+  const list = el('linux-integration-list');
+  list.replaceChildren();
+  for (const item of info.integrations) {
+    const row = document.createElement('div'); row.className = 'integration-row';
+    const copy = document.createElement('div'); copy.className = 'integration-copy';
+    const name = document.createElement('div'); name.className = 'integration-name'; name.textContent = tr(names[item.id] ?? item.id);
+    const detail = document.createElement('div'); detail.className = 'integration-detail'; detail.textContent = tr(item.detail);
+    copy.append(name, detail);
+    if (item.action) {
+      const action = document.createElement('div'); action.className = 'integration-action'; action.textContent = tr(item.action);
+      copy.append(action);
+    }
+    const badge = document.createElement('span'); badge.className = `integration-badge ${item.state}`;
+    badge.textContent = tr(states[item.state] ?? item.state);
+    row.append(copy, badge); list.append(row);
+  }
+  const hintBox = el<HTMLDetailsElement>('linux-hint-box');
+  const hint = info.hotkeyHint;
+  hintBox.hidden = !hint;
+  if (hint) {
+    el('linux-hint').textContent = hint;
+    el('linux-hint-note').textContent = tr(info.compositor === 'niri'
+      ? 'niri передаёт только нажатие, поэтому используйте vokeyra --toggle. Для удержания нужен swhkd.'
+      : info.compositor === 'hyprland' || info.compositor === 'sway'
+        ? 'Для удержания добавьте отдельные привязки vokeyra --press и vokeyra --release.'
+        : 'Добавьте vokeyra --toggle как пользовательскую горячую клавишу в настройках системы.');
+  }
+  const overlayBox = el<HTMLDetailsElement>('linux-overlay-hint-box');
+  let overlayRule = '';
+  if (info.session === 'wayland' && info.overlay.mode !== 'layer-shell') {
+    if (info.compositor === 'niri') {
+      overlayRule = 'window-rule {\n    match title="^Vokeyra Indicator$"\n    open-floating true\n    default-column-width { fixed 248; }\n    default-window-height { fixed 58; }\n    open-focused false\n}';
+    } else if (info.compositor === 'sway') {
+      overlayRule = 'for_window [title="^Vokeyra Indicator$"] floating enable, resize set 248 58';
+    } else if (info.compositor === 'hyprland') {
+      overlayRule = 'windowrulev2 = float,title:^(Vokeyra Indicator)$\nwindowrulev2 = size 248 58,title:^(Vokeyra Indicator)$';
+    }
+  }
+  overlayBox.hidden = !overlayRule;
+  if (overlayRule) el('linux-overlay-hint').textContent = overlayRule;
+  el('open-hotkey-config').hidden = info.session !== 'wayland';
+}
+
 function renderHistory(): void { historyView.render(snapshot.history, snapshot.desktop.platform === 'linux'); }
 function renderModels(): void { if (snapshot) modelsView.update(snapshot, downloads, mode !== 'idle' || capturingHotkey || updateInProgress || maintenanceInProgress); }
 async function toggleRecording(fromHold = false): Promise<void> {
-  if (updateInProgress || maintenanceInProgress || microphonePermissionBusy || confirmationOpen || capturingHotkey || mode === 'starting' || mode === 'transcribing') return;
+  if (updateInProgress || maintenanceInProgress || microphonePermissionBusy || confirmationOpen || capturingHotkey || mode === 'transcribing') return;
+  if (mode === 'starting') { void cancelRecording(); return; }
   if (!snapshot) {
     try { await refresh(); } catch { return; }
   }
@@ -250,11 +318,18 @@ async function toggleRecording(fromHold = false): Promise<void> {
       if (token !== generation) return;
       await api.prepareRecordingAudio(sessionId);
       if (token !== generation) return;
-      recorder = new MicrophoneRecorder();
       startedAt = Date.now();
-      await recorder.start(() => { void toggleRecording(); }, level => {
-        if (token === generation) api.recordingLevel(sessionId, level, (Date.now() - startedAt) / 1000);
-      }, snapshot.settings);
+      if (snapshot.desktop.platform === 'linux') {
+        // WebKitGTK cannot open the microphone while its window is hidden,
+        // which is the normal tray/autostart state on Wayland. The service
+        // captures through PipeWire/PulseAudio instead.
+        await api.startAudioCapture(sessionId);
+      } else {
+        recorder = new MicrophoneRecorder();
+        await recorder.start(() => { void toggleRecording(); }, level => {
+          if (token === generation) api.recordingLevel(sessionId, level, (Date.now() - startedAt) / 1000);
+        }, snapshot.settings);
+      }
       if (token !== generation) return;
       mode = 'recording'; updateControls();
       startedAt = Date.now();
@@ -264,7 +339,12 @@ async function toggleRecording(fromHold = false): Promise<void> {
       }, 500);
     } else {
       mode = 'transcribing'; clearInterval(recordingTimer); updateControls();
-      const wav = await recorder!.stop(); recorder = undefined;
+      let wav: ArrayBuffer;
+      if (snapshot.desktop.platform === 'linux' && !recorder) {
+        wav = await api.stopAudioCapture(sessionId);
+      } else {
+        wav = await recorder!.stop(); recorder = undefined;
+      }
       if (token !== generation) return;
       await api.finishRecordingAudio(sessionId);
       await playFeedback('stop', snapshot.settings).catch(report);
@@ -292,19 +372,22 @@ api.onHold(pressed => {
     else if (mode === 'recording') void toggleRecording();
   }
 });
-async function cancelRecording(): Promise<void> {
+async function cancelRecording(failure?: string): Promise<void> {
   try {
     ++generation; clearInterval(recordingTimer);
     heldSession = false;
     const current = recorder; recorder = undefined;
     const results = await Promise.allSettled([current?.dispose(), api.cancelRecording()]);
     // Main keeps an aborted child busy until it has actually exited.
-    mode = 'idle'; updateControls(); notice('Запись отменена.');
+    mode = 'idle'; updateControls(); notice(failure ?? 'Запись отменена.', !!failure);
     for (const result of results) if (result.status === 'rejected') report(result.reason);
   } catch (error) { report(error); }
 }
 el('cancel-recording').onclick = () => { void cancelRecording(); };
 api.onCancel(() => { void cancelRecording(); });
+api.onCaptureFallback(message => { if (mode === 'starting' || mode === 'recording') notice(message); });
+api.onCaptureError(message => { if (mode === 'starting' || mode === 'recording') void cancelRecording(message); });
+api.onRecordingLimit(() => { if (mode === 'recording') void toggleRecording(); });
 api.onDownload(state => {
   downloads.set(state.id, state);
   if (snapshot) renderModels();
@@ -317,6 +400,12 @@ el('open-data').onclick = () => { void action(() => api.openDataFolder()); };
 el('open-licenses').onclick = () => { void action(() => api.openLicenses()); };
 el('open-github').onclick = () => { void action(() => api.openGithub()); };
 el('open-recordings').onclick = () => { void action(() => api.openRecordingsFolder()); };
+el('refresh-integrations').onclick = () => {
+  const button = el<HTMLButtonElement>('refresh-integrations');
+  button.disabled = true;
+  void api.recheckIntegrations().then(() => refresh(true)).catch(report).finally(() => updateControls());
+};
+el('open-hotkey-config').onclick = () => { void action(() => api.openHotkeyConfig()); };
 const updateButton = el<HTMLButtonElement>('check-updates');
 let updateState: AppUpdateState = { phase: 'idle', currentVersion: '' };
 function renderUpdate(state: AppUpdateState): void {

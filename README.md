@@ -29,7 +29,7 @@ The Windows installer is not yet digitally signed. Windows SmartScreen may displ
 
 The EXE installs for the current user; MSI installs for all users and requires administrator approval. Keep the same format when updating.
 
-For Linux x64, download `.deb` for Ubuntu/Debian, `.rpm` for Fedora, or `.AppImage` for other distributions. Linux support is experimental; see the [Linux guide](docs/LINUX.md) for requirements and limitations.
+For Linux x64, download `.deb` for Ubuntu/Debian, `.rpm` for Fedora, or `.AppImage` for other distributions. Linux support is experimental. On native Wayland Vokeyra uses a layer-shell recording indicator when the compositor provides it and otherwise falls back to a small floating window; the Linux diagnostics section explains the active paths. X11 is verified in CI, while native Wayland/niri requires manual verification — see the [Linux guide](docs/LINUX.md) for the niri setup and test checklist.
 
 When upgrading from 0.1.1, download and install 0.3.0 manually. Subsequent updates can be downloaded and installed from the app.
 
@@ -95,7 +95,7 @@ SenseVoice weights use the [FunASR Model License](https://github.com/modelscope/
 | Internet | Required to download the application and selected models |
 | Storage | Application files plus 27 MB–1.52 GB for each installed model |
 
-macOS, ARM, and 32-bit builds are not available. On Linux, both X11 and Wayland sessions are supported (with automatic insertion via wtype/ydotool, global shortcuts via swhkd or compositor keybindings, and audio muting via PulseAudio / PipeWire; see the [Linux guide](docs/LINUX.md) for details).
+macOS, ARM, and 32-bit builds are not available. On Linux, both X11 and Wayland sessions are supported. Automatic insertion uses wtype, ydotool, or dotool on Wayland and xdotool on X11; shortcuts use compositor bindings or swhkd on Wayland and native registration on X11; audio muting uses PulseAudio or PipeWire. The GlobalShortcuts portal is detected and reported but not used for registration in this version. X11 is verified in CI; native Wayland support, including the layer-shell indicator and niri rules, is implemented and documented for manual verification in the [Linux guide](docs/LINUX.md).
 
 ## Privacy and local data
 

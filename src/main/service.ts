@@ -15,6 +15,8 @@ import { encodeWav, validateWav } from '../shared/wav';
 import type { Settings, Snapshot } from '../shared/contracts';
 import { HistoryStore } from './history';
 import { RecordingOverlay } from './tauri-overlay';
+import { LinuxAudioCapture, listLinuxSources, needsMicrophoneMigration } from './platform/linux-audio';
+import { runLinuxCommand } from './platform/linux-native';
 import { defaultPreferences, validatePreferences } from '../shared/preferences';
 import { prepareTranscript } from '../shared/transcript';
 import type { AppUpdateState } from '../shared/contracts';
@@ -39,6 +41,7 @@ let captureTimer: ReturnType<typeof setTimeout> | undefined;
 let historyCleanupTimer: ReturnType<typeof setInterval> | undefined;
 let hotkeyRegistered = false;
 let recording: { id: string; modelId: string; controller: AbortController; transcribing: boolean } | null = null;
+let audioCapture: LinuxAudioCapture | undefined;
 let recordingGeneration = 0;
 let settingsPath: string;
 let recordingsPath: string;
@@ -143,10 +146,13 @@ async function persistSettings(next: Settings, allowUnavailableHotkey = false): 
   let nextHotkeyRegistered = hotkeyRegistered;
   if (needsRegistration) {
     nextHotkeyRegistered = await desktop.registerShortcut(next.hotkey, toggle);
-    if (!nextHotkeyRegistered && !allowUnavailableHotkey && desktop.capabilities().globalShortcut) {
-      if (desktop.capabilities().session === 'wayland') {
-        if (next.hotkey !== previousHotkey) throw new Error('Не удалось применить горячую клавишу. Проверьте конфигурацию и права swhkd.');
-      } else throw new Error('Сочетание занято другим приложением. Выберите другое.');
+    const capabilities = desktop.capabilities();
+    // On Wayland the generated swhkdrc and the compositor binding are applied
+    // outside Vokeyra. A missing daemon must not block saving the shortcut;
+    // the Linux diagnostics section explains what still needs setup.
+    if (!nextHotkeyRegistered && !allowUnavailableHotkey && capabilities.globalShortcut
+      && capabilities.session !== 'wayland') {
+      throw new Error('Сочетание занято другим приложением. Выберите другое.');
     }
   }
   try { await atomicJson(settingsPath, next); }
@@ -181,6 +187,8 @@ function registerIpc(): void {
     captureTimer = setTimeout(endShortcutCapture, 30_000);
   }, true);
   handle('shortcut:end-capture', endShortcutCapture, true);
+  handle('shortcut:open-config', () => desktop.openHotkeyConfig());
+  handle('app:recheck-integrations', async () => { await desktop.refreshCapabilities(); }, true);
   handle('settings:save', async (value: unknown) => {
     idle();
     const patch = validateSettings(value, settings);
@@ -274,6 +282,59 @@ function registerIpc(): void {
     if (!recording || recording.id !== id || recording.transcribing || typeof level !== 'number' || !Number.isFinite(level) || typeof seconds !== 'number' || !Number.isFinite(seconds)) return;
     overlay?.update({ phase: 'recording', level: Math.max(0, Math.min(1, level)), seconds: Math.max(0, Math.min(300, seconds)) });
   });
+  // WebKitGTK suspends getUserMedia when the main window is hidden, so Linux
+  // capture runs in the service through PipeWire/PulseAudio instead.
+  handle('audio:list-sources', () => process.platform === 'linux' ? listLinuxSources(runLinuxCommand) : Promise.resolve([]));
+  handle('recording:capture-start', async (id: unknown) => {
+    const job = recording;
+    if (process.platform !== 'linux') throw new Error('Запись вне WebView доступна только в Linux.');
+    if (!job || job.id !== id || job.transcribing || job.controller.signal.aborted) throw new Error('Запись уже завершена.');
+    if (audioCapture) await audioCapture.stop(settings.inputChannel).catch(() => {});
+    const capture = new LinuxAudioCapture();
+    audioCapture = capture;
+    try {
+      await capture.start({
+        microphoneId: settings.microphoneId,
+        inputChannel: settings.inputChannel,
+        onLevel: (level, seconds) => {
+          if (recording === job && !job.transcribing && audioCapture === capture) {
+            overlay?.update({ phase: 'recording', level, seconds });
+          }
+        },
+        onLimit: () => { if (recording === job) emit('recording:limit'); },
+        onFallback: () => {
+          if (recording === job && audioCapture === capture) {
+            emit('recording:capture-fallback', 'Выбранный микрофон недоступен. Запись идёт с устройства по умолчанию.');
+          }
+        },
+        onError: error => {
+          if (recording === job && audioCapture === capture) {
+            emit('recording:capture-error', error.message);
+          }
+        },
+      });
+      if (recording !== job || job.controller.signal.aborted || audioCapture !== capture) {
+        await capture.stop(settings.inputChannel).catch(() => {});
+        throw new Error('Запись отменена.');
+      }
+    } catch (error) {
+      if (audioCapture === capture) audioCapture = undefined;
+      await capture.stop(settings.inputChannel).catch(() => {});
+      throw error;
+    }
+  });
+  handle('recording:capture-stop', async (id: unknown) => {
+    const job = recording;
+    if (!job || job.id !== id || !audioCapture) throw new Error('Запись уже завершена.');
+    const capture = audioCapture;
+    audioCapture = undefined;
+    // Never return a partial WAV as a successful recording after parec died.
+    if (capture.error) {
+      await capture.stop(settings.inputChannel).catch(() => {});
+      throw capture.error;
+    }
+    return Buffer.from(await capture.stop(settings.inputChannel)).toString('base64');
+  });
   async function beginRecording(): Promise<string> {
     await startupReady;
     idle();
@@ -303,13 +364,19 @@ function registerIpc(): void {
     ++recordingGeneration;
     recording?.controller.abort();
     if (!recording?.transcribing) recording = null;
+    const capture = audioCapture;
+    audioCapture = undefined;
     overlay?.hide();
-    await desktop.restoreAudio();
+    await Promise.allSettled([
+      capture?.stop(settings.inputChannel),
+      desktop.restoreAudio(),
+    ]);
   });
   async function transcribeRecording(id: unknown, wav: unknown, entryId?: string): Promise<string> {
     const job = recording;
     if (!job || job.id !== id || job.transcribing) throw new Error('Запись уже завершена.');
     let directory: string | undefined;
+    let completed = false;
     job.transcribing = true;
     overlay?.update({ phase: 'transcribing', level: 0, seconds: 0 });
     try {
@@ -329,6 +396,9 @@ function registerIpc(): void {
       const text = prepareTranscript(rawText, settings);
       job.controller.signal.throwIfAborted();
       await history.update(entryId, { text: text.slice(0, 100_000), modelName: installed.model.name, status: 'complete' });
+      // Transcription is complete even if inserting the text fails; keep the
+      // entry available instead of reporting the whole recording as failed.
+      completed = true;
       if (text) {
         if (fromHistory) await desktop.copyText(text);
         else await desktop.deliverText(text, settings);
@@ -336,7 +406,7 @@ function registerIpc(): void {
       await history.applyPolicy(settings.historyLimit, settings.historyRetention);
       return text;
     } catch (error) {
-      if (entryId) await history.update(entryId, { status: 'failed' }).catch(console.error);
+      if (entryId && !completed) await history.update(entryId, { status: 'failed' }).catch(console.error);
       throw error;
     } finally {
       if (directory) await rm(directory, { recursive: true, force: true }).catch(() => {});
@@ -373,8 +443,27 @@ async function start(): Promise<void> {
   try {
     const saved = await readJson(settingsPath) as Settings;
     const migrated = { ...saved, ...(typeof saved.historyLimit === 'number' ? { historyLimit: Math.min(100, saved.historyLimit) } : {}) };
-    settings = { ...defaults, ...validateSettings(migrated),
+    // A profile may move between environments (for example Windows → niri).
+    // Keep portable preferences, but disable features that this session cannot
+    // provide instead of discarding the whole settings file.
+    const caps = desktop.capabilities();
+    const compatible = {
+      ...migrated,
+      ...(caps.pushToTalk ? {} : { pushToTalk: false }),
+      ...(caps.muteAudio ? {} : { muteWhileRecording: false }),
+    };
+    settings = { ...defaults, ...validateSettings(compatible),
       selectedModelId: typeof saved.selectedModelId === 'string' ? safeId(saved.selectedModelId) : null };
+    if (process.platform === 'linux') {
+      // Older versions stored opaque WebKit device ids. They cannot be passed
+      // to parec, so migrate an unusable selection to the system default and
+      // keep the rest of the profile intact.
+      const sources = await listLinuxSources(runLinuxCommand);
+      if (needsMicrophoneMigration(settings.microphoneId, sources)) {
+        settings = { ...settings, microphoneId: 'default' };
+        await atomicJson(settingsPath, settings);
+      }
+    }
   } catch {}
   engines.setIdleTimeout(modelIdleTimeout(settings.modelUnloadDelay));
   history = new HistoryStore(join(root, 'history.json'));
@@ -428,7 +517,12 @@ async function cleanupApplication(): Promise<void> {
   overlay?.hide();
 
   recording?.controller.abort();
-  await Promise.allSettled([models?.shutdown(), engines.unloadAll(), desktop.close(), ...transcriptionTasks]);
+  const capture = audioCapture;
+  audioCapture = undefined;
+  await Promise.allSettled([
+    capture?.stop('all'),
+    models?.shutdown(), engines.unloadAll(), desktop.close(), ...transcriptionTasks,
+  ]);
   if (recordingsPath) await rm(recordingsPath, { recursive: true, force: true }).catch(() => {});
   cleaned = true;
 }

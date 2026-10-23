@@ -4,7 +4,7 @@ GenericName=Speech Recognition
 GenericName[ru]=Распознавание речи
 Comment=Private, local speech to text for your desktop
 Comment[ru]=Приватное локальное распознавание речи для рабочего стола
-Exec=env WEBKIT_DISABLE_DMABUF_RENDERER=1 vokeyra %U
+Exec=vokeyra %U
 Icon=vokeyra
 Terminal=false
 Type=Application

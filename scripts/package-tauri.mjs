@@ -17,6 +17,9 @@ if (bundleFlag !== -1) {
   bundles = values;
 }
 const env = { ...process.env };
+// linuxdeploy is an AppImage and needs FUSE; extract-and-run keeps local and
+// container builds working without it.
+if (process.platform === 'linux') env.APPIMAGE_EXTRACT_AND_RUN ??= '1';
 if (!env.CARGO_HOME && await stat('.tmp/cargo-home/registry').then(item => item.isDirectory()).catch(() => false)) {
   env.CARGO_HOME = resolve('.tmp/cargo-home');
 }

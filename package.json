@@ -32,7 +32,8 @@
     "dist:linux:rpm": "node scripts/package-tauri.mjs --bundles rpm",
     "dist:linux:unsigned": "node scripts/package-tauri.mjs --unsigned --bundles deb,appimage,rpm",
     "smoke": "node scripts/smoke-tauri.mjs",
-    "smoke:service": "node scripts/smoke-service.mjs"
+    "smoke:service": "node scripts/smoke-service.mjs",
+    "check:wayland": "node scripts/check-wayland.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

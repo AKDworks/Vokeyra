@@ -14,8 +14,10 @@ depends=(
   'webkit2gtk-4.1'
   'gtk3'
   'wl-clipboard'
+  'libpulse'
   'openssl'
   'libayatana-appindicator'
+  'gtk-layer-shell'
 )
 optdepends=(
   'wtype: automatic typing and paste on Wayland (wlroots/Hyprland/Sway/Niri)'
@@ -24,7 +26,7 @@ optdepends=(
   'xdotool: automatic typing and paste on X11'
   'pipewire-pulse: system audio muting support'
   'pulseaudio: system audio muting support'
-  'swhkd: global hotkey daemon for Wayland'
+  'swhkd: global hotkey daemon for Wayland with press/release support'
 )
 source=(
   "https://github.com/AKDworks/Vokeyra/releases/download/v${pkgver}/vokeyra_${pkgver}_amd64.deb"

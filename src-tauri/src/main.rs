@@ -1,9 +1,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod microphone;
 #[cfg(windows)]
 mod desktop_worker;
-
+mod microphone;
+#[cfg(target_os = "linux")]
+mod overlay;
 use serde_json::{json, Value};
 use std::{
     collections::HashMap,
@@ -18,7 +19,9 @@ use std::{
 };
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{Emitter, LogicalSize, Manager, PhysicalPosition, WindowEvent};
+#[cfg(not(target_os = "linux"))]
+use tauri::PhysicalPosition;
+use tauri::{Emitter, LogicalSize, Manager, WindowEvent};
 use tauri_plugin_autostart::ManagerExt as AutostartExt;
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
@@ -28,6 +31,82 @@ use tokio::sync::oneshot;
 
 type Reply = Result<Value, String>;
 type Pending = HashMap<u64, oneshot::Sender<Reply>>;
+
+#[cfg(target_os = "linux")]
+fn overlay_status() -> Value {
+    overlay::status()
+}
+
+#[cfg(target_os = "linux")]
+fn overlay_show(app: &tauri::AppHandle, top: bool) {
+    overlay::show(app, top);
+}
+
+#[cfg(target_os = "linux")]
+fn overlay_hide(app: &tauri::AppHandle) {
+    overlay::hide(app);
+}
+
+#[cfg(target_os = "linux")]
+fn overlay_update(app: &tauri::AppHandle, value: Value) {
+    overlay::update(app, value);
+}
+
+#[cfg(not(target_os = "linux"))]
+fn overlay_status() -> Value {
+    json!({
+        "mode": "window",
+        "layerShell": false,
+        "title": "Vokeyra Indicator",
+        "width": 248,
+        "height": 58,
+    })
+}
+
+#[cfg(not(target_os = "linux"))]
+fn overlay_show(app: &tauri::AppHandle, top: bool) {
+    let Some(w) = app.get_webview_window("overlay") else {
+        return;
+    };
+    let monitor = app
+        .cursor_position()
+        .ok()
+        .and_then(|cursor| app.monitor_from_point(cursor.x, cursor.y).ok().flatten())
+        .or_else(|| w.current_monitor().ok().flatten())
+        .or_else(|| app.primary_monitor().ok().flatten())
+        .or_else(|| {
+            app.available_monitors()
+                .ok()
+                .and_then(|m| m.into_iter().next())
+        });
+    let _ = w.set_size(LogicalSize::new(248., 58.));
+    if let Some(monitor) = monitor {
+        let scale = monitor.scale_factor();
+        let area = monitor.work_area();
+        let x = area.position.x + ((area.size.width as f64 - 248. * scale) / 2.).round() as i32;
+        let y = if top {
+            area.position.y + (20. * scale) as i32
+        } else {
+            area.position.y + area.size.height as i32 - (78. * scale) as i32
+        };
+        let _ = w.set_position(PhysicalPosition::new(x, y));
+    } else {
+        let _ = w.center();
+    }
+    let _ = w.show();
+}
+
+#[cfg(not(target_os = "linux"))]
+fn overlay_hide(app: &tauri::AppHandle) {
+    if let Some(w) = app.get_webview_window("overlay") {
+        let _ = w.hide();
+    }
+}
+
+#[cfg(not(target_os = "linux"))]
+fn overlay_update(app: &tauri::AppHandle, value: Value) {
+    let _ = app.emit_to("overlay", "overlay:state", value);
+}
 fn linux_wayland() -> bool {
     cfg!(target_os = "linux")
         && (std::env::var("XDG_SESSION_TYPE").as_deref() == Ok("wayland")
@@ -145,9 +224,14 @@ async fn service_request(
         "recording:transcribe",
         "recording:cancel",
         "recording:level",
+        "recording:capture-start",
+        "recording:capture-stop",
+        "audio:list-sources",
         "clipboard:copy",
         "shortcut:begin-capture",
         "shortcut:end-capture",
+        "shortcut:open-config",
+        "app:recheck-integrations",
         "history:delete",
         "history:favorite",
         "history:audio",
@@ -434,37 +518,17 @@ async fn host_request(app: tauri::AppHandle, method: &str, args: &[Value]) -> Re
                 .map_err(|e| e.to_string())?;
             Ok(Value::Null)
         }
+        "overlay:status" => Ok(overlay_status()),
         "overlay:hide" => {
-            if let Some(w) = app.get_webview_window("overlay") {
-                let _ = w.hide();
-            }
+            overlay_hide(&app);
             Ok(Value::Null)
         }
         "overlay:show" => {
-            let w = app
-                .get_webview_window("overlay")
-                .ok_or("Overlay unavailable")?;
-            let monitor = app
-                .cursor_position()
-                .ok()
-                .and_then(|cursor| app.monitor_from_point(cursor.x, cursor.y).ok().flatten())
-                .or_else(|| w.current_monitor().ok().flatten())
-                .or_else(|| app.primary_monitor().ok().flatten())
-                .or_else(|| app.available_monitors().ok().and_then(|m| m.into_iter().next()));
-            if let Some(monitor) = monitor {
-                let scale = monitor.scale_factor();
-                let area = monitor.work_area();
-                let x = area.position.x + ((area.size.width as f64 - 248. * scale) / 2.).round() as i32;
-                let y = if text().unwrap_or("bottom") == "top" {
-                    area.position.y + (20. * scale) as i32
-                } else {
-                    area.position.y + area.size.height as i32 - (78. * scale) as i32
-                };
-                let _ = w.set_position(PhysicalPosition::new(x, y));
-            } else {
-                let _ = w.center();
-            }
-            w.show().map_err(|e| e.to_string())?;
+            overlay_show(&app, text().unwrap_or("bottom") == "top");
+            Ok(Value::Null)
+        }
+        "overlay:update" => {
+            overlay_update(&app, args.first().cloned().unwrap_or(Value::Null));
             Ok(Value::Null)
         }
         "update:check" => check_update(app).await,
@@ -595,6 +659,7 @@ fn read_service(
                 ));
             }
         }
+        overlay_hide(&handle);
         let _ = handle.emit_to(
             "main",
             "service:error",
@@ -611,12 +676,20 @@ fn read_service(
 fn main() {
     #[cfg(target_os = "linux")]
     {
-        if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
+        // WebKitGTK's DMABUF renderer still fails on some NVIDIA/KWin Wayland
+        // setups (blank window, EGL errors, crashes). The recording indicator
+        // is native Cairo now, so the old workaround no longer blurs it; keep
+        // it enabled by default and let users opt back in explicitly.
+        let enable_dmabuf = std::env::var_os("VOKEYRA_ENABLE_DMABUF_RENDERER")
+            .is_some_and(|value| value != "0" && !value.is_empty());
+        if !enable_dmabuf && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
             std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
         }
     }
     #[cfg(windows)]
-    if let Some(code) = desktop_worker::run_if_requested() { std::process::exit(code); }
+    if let Some(code) = desktop_worker::run_if_requested() {
+        std::process::exit(code);
+    }
     let builder = tauri::Builder::default()
         .on_permission_request(|webview, kind| {
             use tauri::webview::{PermissionKind, PermissionResponse};
@@ -695,6 +768,16 @@ fn main() {
     };
     builder
         .setup(|app| {
+            #[cfg(target_os = "linux")]
+            if let Err(error) = overlay::create(app.handle()) {
+                eprintln!("Vokeyra overlay: failed to create the native indicator: {error}");
+            }
+            #[cfg(target_os = "linux")]
+            if let Some(window) = app.get_webview_window("overlay") {
+                // The Linux indicator is native; keep the unused WebView
+                // overlay from consuming memory or appearing as a stray window.
+                let _ = window.close();
+            }
             let (service, output, errors) = start_service(app.handle())?;
             app.manage(Desktop {
                 service: service.clone(),
@@ -757,6 +840,7 @@ fn main() {
         .expect("Failed to initialize Vokeyra")
         .run(|app, event| {
             if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                overlay_hide(app);
                 if !app.state::<Desktop>().quitting.load(Ordering::SeqCst) {
                     api.prevent_exit();
                     shutdown(app.clone());

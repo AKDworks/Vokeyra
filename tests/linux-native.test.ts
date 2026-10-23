@@ -26,11 +26,14 @@ describe('Linux integration', () => {
 
   it('uses native Wayland clipboard tools and reports unavailable global input honestly when no injection tools exist', async () => {
     vi.stubEnv('XDG_SESSION_TYPE', 'wayland'); vi.stubEnv('WAYLAND_DISPLAY', 'wayland-0');
+    vi.stubEnv('XDG_CURRENT_DESKTOP', ''); vi.stubEnv('XDG_SESSION_DESKTOP', ''); vi.stubEnv('NIRI_SOCKET', '');
+    vi.stubEnv('KDE_FULL_SESSION', ''); vi.stubEnv('GNOME_DESKTOP_SESSION_ID', ''); vi.stubEnv('HYPRLAND_INSTANCE_SIGNATURE', ''); vi.stubEnv('SWAYSOCK', '');
     const run = vi.fn<LinuxCommand>().mockResolvedValue('previous');
     const fallback = vi.fn();
     const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste'].includes(name) ? `/usr/bin/${name}` : undefined);
     await native.start();
-    expect(native.capabilities()).toMatchObject({ globalShortcut: false, pushToTalk: false, automaticPaste: false, directTyping: false, muteAudio: false });
+    expect(native.capabilities()).toMatchObject({ globalShortcut: true, pushToTalk: false, automaticPaste: false, directTyping: false, muteAudio: false });
+    expect(native.capabilities().linux).toMatchObject({ compositor: 'unknown', hotkeyBackend: 'compositor', portal: 'unknown' });
     await native.clipboardWrite('Привет', fallback);
     expect(run).toHaveBeenCalledWith('/usr/bin/wl-copy', ['--type', 'text/plain;charset=utf-8'], { input: 'Привет', quiet: true });
     expect(await native.clipboardRead(fallback)).toBe('previous');
@@ -54,7 +57,7 @@ describe('Linux integration', () => {
     const run = vi.fn<LinuxCommand>().mockResolvedValue('');
     const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste', 'wtype'].includes(name) ? `/usr/bin/${name}` : undefined);
     await native.start();
-    expect(native.capabilities()).toMatchObject({ automaticPaste: true, directTyping: true, globalShortcut: false });
+    expect(native.capabilities()).toMatchObject({ automaticPaste: true, directTyping: true, globalShortcut: true });
 
     const text = 'Тестовый текст Wayland';
     await native.command('type', Buffer.from(text).toString('base64'));
@@ -78,10 +81,12 @@ describe('Linux integration', () => {
 
   it('falls back to ydotool on Wayland when wtype is absent', async () => {
     vi.stubEnv('XDG_SESSION_TYPE', 'wayland'); vi.stubEnv('WAYLAND_DISPLAY', 'wayland-0');
-    const run = vi.fn<LinuxCommand>().mockResolvedValue('');
-    const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste', 'ydotool'].includes(name) ? `/usr/bin/${name}` : undefined);
+    const run = vi.fn<LinuxCommand>().mockImplementation(async (file) => file === 'pgrep' ? '123\n' : '');
+    const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste', 'ydotool'].includes(name) ? `/usr/bin/${name}` : undefined,
+      undefined, async path => path.endsWith('.ydotool_socket'));
     await native.start();
     expect(native.capabilities()).toMatchObject({ automaticPaste: true, directTyping: true });
+    expect(native.capabilities().linux?.pasteBackend).toBe('ydotool');
 
     await native.command('key', 'ctrl-v');
     expect(run).toHaveBeenCalledWith('/usr/bin/ydotool', ['key', '29:1', '47:1', '47:0', '29:0']);
@@ -93,7 +98,8 @@ describe('Linux integration', () => {
   it('falls back to dotool on Wayland when wtype and ydotool are absent', async () => {
     vi.stubEnv('XDG_SESSION_TYPE', 'wayland'); vi.stubEnv('WAYLAND_DISPLAY', 'wayland-0');
     const run = vi.fn<LinuxCommand>().mockResolvedValue('');
-    const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste', 'dotool'].includes(name) ? `/usr/bin/${name}` : undefined);
+    const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste', 'dotool'].includes(name) ? `/usr/bin/${name}` : undefined,
+      undefined, async () => true, async () => true);
     await native.start();
     expect(native.capabilities()).toMatchObject({ automaticPaste: true, directTyping: true });
 
@@ -265,15 +271,121 @@ describe('Linux integration', () => {
     expect(run).not.toHaveBeenCalledWith('/usr/bin/wpctl', ['set-mute', '42', '0']);
   });
 
+  it('does not claim a working ydotool when the daemon socket and process are missing', async () => {
+    vi.stubEnv('XDG_SESSION_TYPE', 'wayland'); vi.stubEnv('WAYLAND_DISPLAY', 'wayland-0');
+    const run = vi.fn<LinuxCommand>().mockResolvedValue('');
+    const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste', 'ydotool'].includes(name) ? `/usr/bin/${name}` : undefined,
+      undefined, async () => false);
+    await native.start();
+    const capabilities = native.capabilities();
+    expect(capabilities.automaticPaste).toBe(false);
+    expect(capabilities.linux?.integrations.find(item => item.id === 'paste')).toMatchObject({ state: 'setup' });
+    await expect(native.command('key', 'ctrl-v')).rejects.toThrow('недоступна');
+  });
+
+  it('never retries a partially attempted wtype input through the clipboard', async () => {
+    vi.stubEnv('XDG_SESSION_TYPE', 'wayland'); vi.stubEnv('WAYLAND_DISPLAY', 'wayland-0');
+    const run = vi.fn<LinuxCommand>().mockImplementation(async (file, args) => {
+      if (file.endsWith('wtype')) throw new Error('virtual keyboard disconnected');
+      if (args[0] === 'get-volume') return '';
+      return '';
+    });
+    const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste', 'wtype', 'ydotool']
+      .includes(name) ? `/usr/bin/${name}` : undefined, undefined, async () => true);
+    await native.start();
+    await expect(native.command('type', Buffer.from('текст').toString('base64'))).rejects.toThrow('Текст сохранён в истории');
+    expect(run.mock.calls.filter(([file]) => file.endsWith('wl-copy'))).toHaveLength(0);
+    expect(run.mock.calls.filter(([file]) => file.endsWith('ydotool'))).toHaveLength(0);
+    expect(native.capabilities().linux?.integrations.find(item => item.id === 'paste')?.state).toBe('error');
+  });
+
+  it('switches to a working backend only when the first one never started, then re-diagnoses', async () => {
+    vi.stubEnv('XDG_SESSION_TYPE', 'wayland'); vi.stubEnv('WAYLAND_DISPLAY', 'wayland-0');
+    vi.stubEnv('XDG_CURRENT_DESKTOP', ''); vi.stubEnv('XDG_SESSION_DESKTOP', ''); vi.stubEnv('KDE_FULL_SESSION', '');
+    const run = vi.fn<LinuxCommand>().mockImplementation(async (file) => {
+      if (file === 'pgrep') return '123\n';
+      if (file.endsWith('wtype')) {
+        const error = new Error('spawn wtype ENOENT') as NodeJS.ErrnoException;
+        error.code = 'ENOENT';
+        throw error;
+      }
+      return '';
+    });
+    const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste', 'wtype', 'ydotool']
+      .includes(name) ? `/usr/bin/${name}` : undefined, undefined, async () => true);
+    await native.start();
+    await expect(native.command('key', 'ctrl-v')).resolves.toBe('');
+    expect(run.mock.calls.filter(([file]) => file.endsWith('wtype'))).toHaveLength(1);
+    expect(run.mock.calls.filter(([file]) => file.endsWith('ydotool'))).toHaveLength(1);
+    expect(native.capabilities().linux?.pasteBackend).toBe('ydotool');
+    await native.recheck({ mode: 'layer-shell', layerShell: true });
+    expect(native.capabilities().linux?.pasteBackend).toBe('wtype');
+  });
+
+  it('prefers ydotool on KDE/GNOME and wtype on wlroots for reliable insertion', async () => {
+    vi.stubEnv('XDG_SESSION_TYPE', 'wayland'); vi.stubEnv('WAYLAND_DISPLAY', 'wayland-0');
+    const run = vi.fn<LinuxCommand>().mockImplementation(async file => file === 'pgrep' ? '123\n' : '');
+    const find = async (name: string) => ['wl-copy', 'wl-paste', 'wtype', 'ydotool'].includes(name) ? `/usr/bin/${name}` : undefined;
+    const kde = new LinuxNative(run, find, undefined, async () => true);
+    vi.stubEnv('XDG_CURRENT_DESKTOP', 'KDE'); vi.stubEnv('KDE_FULL_SESSION', 'true');
+    await kde.start();
+    expect(kde.capabilities().linux?.pasteBackend).toBe('ydotool');
+
+    vi.stubEnv('XDG_CURRENT_DESKTOP', 'niri'); vi.stubEnv('KDE_FULL_SESSION', ''); vi.stubEnv('NIRI_SOCKET', '/run/user/1000/niri.sock');
+    const niri = new LinuxNative(run, find, undefined, async () => true);
+    await niri.start();
+    expect(niri.capabilities().linux?.pasteBackend).toBe('wtype');
+  });
+
+  it('detects the compositor and the GlobalShortcuts portal without claiming portal registration', async () => {
+    vi.stubEnv('XDG_SESSION_TYPE', 'wayland'); vi.stubEnv('WAYLAND_DISPLAY', 'wayland-0');
+    vi.stubEnv('NIRI_SOCKET', '/run/user/1000/niri.sock'); vi.stubEnv('XDG_CURRENT_DESKTOP', 'niri');
+    const run = vi.fn<LinuxCommand>().mockImplementation(async (file, args) => {
+      if (file.endsWith('busctl') && args[0] === '--user') return 'interface org.freedesktop.portal.GlobalShortcuts';
+      return '';
+    });
+    const native = new LinuxNative(run, async name => name === 'busctl' ? '/usr/bin/busctl' : undefined);
+    await native.start();
+    const capabilities = native.capabilities();
+    expect(capabilities.linux).toMatchObject({ compositor: 'niri', portal: 'available', hotkeyBackend: 'compositor' });
+    expect(capabilities.pushToTalk).toBe(false);
+    expect(capabilities.linux?.hotkeyHint).toContain('vokeyra');
+    expect(capabilities.linux?.integrations.find(item => item.id === 'hotkey')?.state).toBe('setup');
+  });
+
+  it.each(['previous text', ''])('restores the X11 clipboard through the host bridge: %j', async previous => {
+    vi.stubEnv('XDG_SESSION_TYPE', 'x11'); vi.stubEnv('WAYLAND_DISPLAY', ''); vi.stubEnv('DISPLAY', ':1');
+    const run = vi.fn<LinuxCommand>();
+    const native = new LinuxNative(run, async () => undefined);
+    await native.start();
+    const write = vi.fn().mockResolvedValue(undefined);
+    expect(await native.restoreClipboard('dictated', previous, async () => 'dictated', write)).toBe(true);
+    expect(write).toHaveBeenCalledWith(previous);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('does not restore the X11 clipboard after the user changed it', async () => {
+    vi.stubEnv('XDG_SESSION_TYPE', 'x11'); vi.stubEnv('WAYLAND_DISPLAY', ''); vi.stubEnv('DISPLAY', ':1');
+    const run = vi.fn<LinuxCommand>();
+    const native = new LinuxNative(run, async () => undefined);
+    await native.start();
+    const write = vi.fn().mockResolvedValue(undefined);
+    await expect(native.restoreClipboard('dictated', 'previous', async () => 'new user text', write)).resolves.toBe(false);
+    expect(write).not.toHaveBeenCalled();
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it.each(['previous text', ''])('restores the clipboard after failed Wayland typing, including an empty clipboard: %j', async previous => {
     vi.stubEnv('XDG_SESSION_TYPE', 'wayland');
     let clipboard = previous;
     const run: LinuxCommand = async (file, _args, options) => {
+      if (file === 'pgrep') return '123\n';
       if (file.endsWith('wl-paste')) return clipboard;
       if (file.endsWith('wl-copy')) { clipboard = options!.input!; return ''; }
       throw new Error('ydotool daemon unavailable');
     };
-    const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste', 'ydotool'].includes(name) ? `/usr/bin/${name}` : undefined);
+    const native = new LinuxNative(run, async name => ['wl-copy', 'wl-paste', 'ydotool'].includes(name) ? `/usr/bin/${name}` : undefined,
+      undefined, async path => path.endsWith('.ydotool_socket'));
     await native.start();
     await expect(native.command('type', Buffer.from('dictated text').toString('base64'))).rejects.toThrow('daemon unavailable');
     expect(clipboard).toBe(previous);

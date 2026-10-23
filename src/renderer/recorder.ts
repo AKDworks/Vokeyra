@@ -4,7 +4,37 @@ import { MAX_RECORDING_SECONDS, type Settings } from '../shared/contracts';
 import { microphoneAccessDenied, MicrophoneAccessError } from './microphone-errors';
 import { microphoneLevel } from '../shared/audio-level';
 
+export interface RecorderTimings {
+  requestMs?: number;
+  workletMs?: number;
+  resumeMs?: number;
+}
+
+function withTimeout<T>(promise: Promise<T>, timeout: number, message: string,
+  onLate?: (value: T) => void): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      settled = true;
+      reject(new Error(message));
+      // The regular handler below releases a late result exactly once.
+    }, timeout);
+    promise.then(value => {
+      if (settled) { onLate?.(value); return; }
+      settled = true; clearTimeout(timer); resolve(value);
+    }, error => {
+      if (settled) return;
+      settled = true; clearTimeout(timer); reject(error);
+    });
+  });
+}
+
+function stopTracks(stream: MediaStream): void {
+  stream.getTracks().forEach(track => track.stop());
+}
+
 export class MicrophoneRecorder {
+  constructor(private timings: RecorderTimings = {}) {}
   private stream?: MediaStream;
   private context?: AudioContext;
   private source?: MediaStreamAudioSourceNode;
@@ -19,17 +49,17 @@ export class MicrophoneRecorder {
     try {
       let stream: MediaStream;
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: {
+        stream = await withTimeout(navigator.mediaDevices.getUserMedia({ audio: {
           deviceId: options.microphoneId === 'default' ? undefined : { exact: options.microphoneId },
           channelCount: options.inputChannel === 'second' ? { exact: 2 } : { ideal: 2 },
           echoCancellation: false, noiseSuppression: false, autoGainControl: false,
-        }, video: false });
+        }, video: false }), this.timings.requestMs ?? 10_000, 'Микрофон не отвечает. Проверьте доступ и выбранное устройство.', stopTracks);
       } catch (err) {
         if (options.microphoneId !== 'default') {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: {
+          stream = await withTimeout(navigator.mediaDevices.getUserMedia({ audio: {
             channelCount: options.inputChannel === 'second' ? { exact: 2 } : { ideal: 2 },
             echoCancellation: false, noiseSuppression: false, autoGainControl: false,
-          }, video: false });
+          }, video: false }), this.timings.requestMs ?? 10_000, 'Микрофон не отвечает. Проверьте доступ и выбранное устройство.', stopTracks);
         } else {
           throw err;
         }
@@ -38,7 +68,7 @@ export class MicrophoneRecorder {
       this.stream = stream;
       this.context = new AudioContext({ sampleRate: 16000 });
       if (this.context.sampleRate !== 16000) throw new Error('Устройство не поддерживает запись 16 кГц.');
-      await this.context.audioWorklet.addModule(workletUrl);
+      await withTimeout(this.context.audioWorklet.addModule(workletUrl), this.timings.workletMs ?? 5_000, 'Не удалось подготовить обработку микрофона.');
       if (this.cancelled) throw new Error('Запись отменена.');
       this.node = new AudioWorkletNode(this.context, 'pcm-recorder', { processorOptions: { inputChannel: options.inputChannel } });
       this.node.port.onmessage = (event: MessageEvent<Float32Array | string | { type: 'level'; rms: number }>) => {
@@ -58,7 +88,8 @@ export class MicrophoneRecorder {
       this.source.connect(this.node);
       // Worklet emits silence; the microphone is never played through the speakers.
       this.node.connect(this.context.destination);
-      await this.context.resume();
+      const context = this.context;
+      await withTimeout(context.resume(), this.timings.resumeMs ?? 5_000, 'Не удалось включить микрофон. Закройте другие программы, использующие его.', () => { void context.close().catch(() => {}); });
       this.timer = setTimeout(onLimit, MAX_RECORDING_SECONDS * 1000);
     } catch (error) {
       await this.dispose();

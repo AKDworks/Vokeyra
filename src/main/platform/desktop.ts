@@ -1,6 +1,8 @@
 import { config, host } from '../host';
 import { WindowsNative } from './windows-native';
-import { LinuxNative } from './linux-native';
+import { LinuxNative, type OverlayProbe } from './linux-native';
+import { stat } from 'node:fs/promises';
+import { join } from 'node:path';
 import { windowsShortcutKeys } from './windows-keys';
 import type { DesktopCapabilities, Preferences } from '../../shared/contracts';
 
@@ -12,6 +14,8 @@ export interface DesktopIntegration {
   copyText(text: string): Promise<void>;
   deliverText(text: string, settings: Preferences): Promise<void>;
   initialize(onRelease: () => void, onFailure: (error: Error) => void): Promise<void>;
+  refreshCapabilities(): Promise<DesktopCapabilities>;
+  openHotkeyConfig(): Promise<void>;
   watchRelease(key: string): Promise<void>;
   muteAudio(): Promise<void>;
   restoreAudio(): Promise<void>;
@@ -23,6 +27,11 @@ const input = native ?? linux;
 let closing = false;
 const clipboardRead = () => linux ? linux.clipboardRead(() => host<string>('clipboard:read')) : host<string>('clipboard:read');
 const clipboardWrite = (text: string) => linux ? linux.clipboardWrite(text, value => host('clipboard:write', value)) : host('clipboard:write', text);
+async function overlayProbe(): Promise<OverlayProbe | undefined> {
+  if (!linux) return undefined;
+  const status = await host<Partial<OverlayProbe>>('overlay:status').catch(() => undefined);
+  return status ? { mode: status.mode, layerShell: status.layerShell, reason: status.reason, title: status.title } : undefined;
+}
 export const desktop: DesktopIntegration = {
   capabilities: () => linux?.capabilities() ?? { platform: native ? 'windows' : 'other', session: 'native',
     globalShortcut: !!native, pushToTalk: !!native, muteAudio: !!native, automaticPaste: !!native, directTyping: !!native },
@@ -49,7 +58,12 @@ export const desktop: DesktopIntegration = {
           await input.command('key', settings.pasteMethod);
           await new Promise(resolve => setTimeout(resolve, 160));
         } finally {
-          if (settings.clipboardHandling === 'restore') await clipboardWrite(previous);
+          if (settings.clipboardHandling === 'restore') {
+            // On Wayland another application may have changed the clipboard
+            // while we were pasting. Never overwrite that newer value.
+            if (linux) await linux.restoreClipboard(text, previous, clipboardRead, clipboardWrite);
+            else await clipboardWrite(previous);
+          }
         }
       }
     }
@@ -60,7 +74,21 @@ export const desktop: DesktopIntegration = {
   },
   initialize: async (onRelease, onFailure) => {
     if (native) { native.onRelease = onRelease; native.onFailure = onFailure; await native.start(); }
-    await linux?.start();
+    if (linux) await linux.recheck(await overlayProbe());
+  },
+  refreshCapabilities: async () => {
+    if (linux) await linux.recheck(await overlayProbe());
+    return desktop.capabilities();
+  },
+  openHotkeyConfig: async () => {
+    if (!linux || linux.capabilities().session !== 'wayland') {
+      throw new Error('Файл конфигурации создаётся только в сеансе Wayland.');
+    }
+    const path = join(config.dataPath, 'swhkdrc');
+    if (!(await stat(path).catch(() => null))?.isFile()) {
+      throw new Error('Сначала сохраните горячую клавишу, чтобы создать swhkdrc.');
+    }
+    await host('path:reveal', path);
   },
   watchRelease: async key => { if (native) await native.command('watch', windowsShortcutKeys(key)); },
   muteAudio: async () => {
