@@ -61,7 +61,7 @@ export const desktop: DesktopIntegration = {
           if (settings.clipboardHandling === 'restore') {
             // On Wayland another application may have changed the clipboard
             // while we were pasting. Never overwrite that newer value.
-            if (linux) await linux.restoreClipboard(text, previous);
+            if (linux) await linux.restoreClipboard(text, previous, clipboardRead, clipboardWrite);
             else await clipboardWrite(previous);
           }
         }

@@ -11,9 +11,13 @@ vi.mock('../src/main/platform/linux-native', () => ({ LinuxNative: class {
   capabilities = () => ({ automaticPaste: true });
   clipboardRead = async () => mocks.clipboard;
   clipboardWrite = async (value: string) => { mocks.clipboard = value; };
-  restoreClipboard = async (dictated: string, previous: string) => {
-    if (mocks.clipboard !== dictated) return false;
-    mocks.clipboard = previous; return true;
+  restoreClipboard = async (dictated: string, previous: string, read?: () => Promise<string>,
+    write?: (text: string) => Promise<void>) => {
+    if (!read || !write) throw new Error('clipboard bridge was not passed');
+    const current = await read();
+    if (current !== dictated) return false;
+    await write(previous);
+    return true;
   };
 } }));
 import { desktop } from '../src/main/platform/desktop';

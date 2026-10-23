@@ -1,8 +1,9 @@
-import type { Preferences } from '../shared/contracts';
+import type { AudioSource, DesktopApi, Preferences } from '../shared/contracts';
 import { CustomSelect, type SelectOption } from './custom-select';
 import { playFeedback } from './audio-feedback';
 import { setIcon } from './icons';
 import { microphoneAccessDenied, MicrophoneAccessError } from './microphone-errors';
+import { microphoneSourceOptions } from '../shared/audio-sources';
 
 const el = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 export class SoundSettings {
@@ -12,10 +13,13 @@ export class SoundSettings {
   private scanning = false;
   private preview?: AbortController;
   private devices: MediaDeviceInfo[] = [];
+  private platform: 'windows' | 'linux' | 'other' = 'other';
+  private linuxSources: AudioSource[] = [];
   private selects: Record<string, CustomSelect>;
   private toggles = { 'push-to-talk': 'pushToTalk', 'mute-recording': 'muteWhileRecording', 'audio-feedback': 'audioFeedback' } as const;
 
-  constructor(private save: (patch: Partial<Preferences>) => Promise<void>, private report: (error: unknown) => void) {
+  constructor(private save: (patch: Partial<Preferences>) => Promise<void>, private report: (error: unknown) => void,
+    private api: DesktopApi) {
     this.selects = {
       microphone: this.select('microphone', [{ value: 'default', label: 'По умолчанию' }], value => this.update({ microphoneId: value })),
       'input-channel': this.select('input-channel', [{ value: 'all', label: 'Все каналы' }, { value: 'first', label: 'Первый канал' }, { value: 'second', label: 'Второй канал' }], value => this.update({ inputChannel: value as Preferences['inputChannel'] })),
@@ -44,6 +48,10 @@ export class SoundSettings {
   }
   private select(id: string, options: SelectOption[], onChange: (value: string) => void): CustomSelect {
     return new CustomSelect(el<HTMLButtonElement>(id), el(id + '-options'), options, onChange);
+  }
+  setPlatform(platform: 'windows' | 'linux' | 'other'): void {
+    this.platform = platform;
+    this.renderDevices();
   }
   setValue(settings: Preferences): void {
     this.preferences = settings;
@@ -80,9 +88,13 @@ export class SoundSettings {
       ['microphone', 'audioinput', this.preferences.microphoneId],
       ['output-device', 'audiooutput', this.preferences.outputDeviceId],
     ] as const) {
-      const options = [{ value: 'default', label: 'По умолчанию' }, ...this.devices.filter(device => device.kind === kind && !['default', 'communications', ''].includes(device.deviceId))
-        .map((device, index) => ({ value: device.deviceId, label: device.label || `${kind === 'audioinput' ? 'Микрофон' : 'Выход'} ${index + 1}` }))];
-      if (!options.some(option => option.value === selected)) options.push({ value: selected, label: 'Устройство недоступно' });
+      const options = id === 'microphone' && this.platform === 'linux'
+        ? microphoneSourceOptions(this.linuxSources, selected)
+        : [{ value: 'default', label: 'По умолчанию' }, ...this.devices.filter(device => device.kind === kind && !['default', 'communications', ''].includes(device.deviceId))
+          .map((device, index) => ({ value: device.deviceId, label: device.label || `${kind === 'audioinput' ? 'Микрофон' : 'Выход'} ${index + 1}` }))];
+      if (id !== 'microphone' || this.platform !== 'linux') {
+        if (!options.some(option => option.value === selected)) options.push({ value: selected, label: 'Устройство недоступно' });
+      }
       this.selects[id]!.setOptions(options); this.selects[id]!.setValue(selected);
     }
   }
@@ -90,6 +102,14 @@ export class SoundSettings {
     if (this.scanning || this.busy) return;
     this.scanning = true; this.renderDisabled();
     try {
+      if (this.platform === 'linux') {
+        // The capture backend uses PulseAudio/PipeWire source names, not the
+        // opaque WebKit device ids. Keep browser enumeration only for outputs.
+        this.linuxSources = await this.api.listAudioSources();
+        this.devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+        this.renderDevices();
+        return;
+      }
       if (requestAccess) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         stream.getTracks().forEach(track => track.stop());

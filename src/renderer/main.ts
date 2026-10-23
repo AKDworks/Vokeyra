@@ -104,7 +104,7 @@ const switchSettings: Array<[string, keyof Pick<Preferences, 'hideOnStartup' | '
 for (const [id, key] of switchSettings) el<HTMLButtonElement>(id).onclick = () => {
   void savePreferences({ [key]: !snapshot.settings[key] }).catch(report);
 };
-const soundSettings = new SoundSettings(savePreferences, report);
+const soundSettings = new SoundSettings(savePreferences, report, api);
 const microphoneAccess = new MicrophoneAccess(api, () => soundSettings.refreshDevices(false), requesting => {
   microphonePermissionBusy = requesting; updateControls();
 });
@@ -185,6 +185,7 @@ function updateControls(): void {
 async function refresh(fillSettings = false): Promise<void> {
   snapshot = await api.snapshot();
   setAppLanguage(snapshot.settings.appLanguage);
+  soundSettings.setPlatform(snapshot.desktop.platform);
   const manualRecording = el<HTMLDetailsElement>('manual-recording');
   manualRecording.hidden = snapshot.desktop.platform !== 'linux';
   if (!initialized && snapshot.desktop.platform === 'linux') manualRecording.open = true;
@@ -371,19 +372,21 @@ api.onHold(pressed => {
     else if (mode === 'recording') void toggleRecording();
   }
 });
-async function cancelRecording(): Promise<void> {
+async function cancelRecording(failure?: string): Promise<void> {
   try {
     ++generation; clearInterval(recordingTimer);
     heldSession = false;
     const current = recorder; recorder = undefined;
     const results = await Promise.allSettled([current?.dispose(), api.cancelRecording()]);
     // Main keeps an aborted child busy until it has actually exited.
-    mode = 'idle'; updateControls(); notice('Запись отменена.');
+    mode = 'idle'; updateControls(); notice(failure ?? 'Запись отменена.', !!failure);
     for (const result of results) if (result.status === 'rejected') report(result.reason);
   } catch (error) { report(error); }
 }
 el('cancel-recording').onclick = () => { void cancelRecording(); };
 api.onCancel(() => { void cancelRecording(); });
+api.onCaptureFallback(message => { if (mode === 'starting' || mode === 'recording') notice(message); });
+api.onCaptureError(message => { if (mode === 'starting' || mode === 'recording') void cancelRecording(message); });
 api.onRecordingLimit(() => { if (mode === 'recording') void toggleRecording(); });
 api.onDownload(state => {
   downloads.set(state.id, state);

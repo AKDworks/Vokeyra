@@ -226,6 +226,7 @@ async fn service_request(
         "recording:level",
         "recording:capture-start",
         "recording:capture-stop",
+        "audio:list-sources",
         "clipboard:copy",
         "shortcut:begin-capture",
         "shortcut:end-capture",
