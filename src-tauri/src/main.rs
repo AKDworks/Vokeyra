@@ -676,15 +676,13 @@ fn read_service(
 fn main() {
     #[cfg(target_os = "linux")]
     {
-        // The old blanket workaround forced WebKitGTK to re-render through a
-        // software path even on native Wayland, which makes a fractional-scale
-        // overlay look blurry. Keep it for X11 (blank-window workaround), allow
-        // an explicit override, and let native Wayland use its DMABUF path.
-        let force_disable = std::env::var_os("VOKEYRA_DISABLE_DMABUF_RENDERER")
+        // WebKitGTK's DMABUF renderer still fails on some NVIDIA/KWin Wayland
+        // setups (blank window, EGL errors, crashes). The recording indicator
+        // is native Cairo now, so the old workaround no longer blurs it; keep
+        // it enabled by default and let users opt back in explicitly.
+        let enable_dmabuf = std::env::var_os("VOKEYRA_ENABLE_DMABUF_RENDERER")
             .is_some_and(|value| value != "0" && !value.is_empty());
-        if (force_disable || !linux_wayland())
-            && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none()
-        {
+        if !enable_dmabuf && std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_none() {
             std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
         }
     }

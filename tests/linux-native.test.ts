@@ -301,6 +301,7 @@ describe('Linux integration', () => {
 
   it('switches to a working backend only when the first one never started, then re-diagnoses', async () => {
     vi.stubEnv('XDG_SESSION_TYPE', 'wayland'); vi.stubEnv('WAYLAND_DISPLAY', 'wayland-0');
+    vi.stubEnv('XDG_CURRENT_DESKTOP', ''); vi.stubEnv('XDG_SESSION_DESKTOP', ''); vi.stubEnv('KDE_FULL_SESSION', '');
     const run = vi.fn<LinuxCommand>().mockImplementation(async (file) => {
       if (file === 'pgrep') return '123\n';
       if (file.endsWith('wtype')) {
@@ -319,6 +320,21 @@ describe('Linux integration', () => {
     expect(native.capabilities().linux?.pasteBackend).toBe('ydotool');
     await native.recheck({ mode: 'layer-shell', layerShell: true });
     expect(native.capabilities().linux?.pasteBackend).toBe('wtype');
+  });
+
+  it('prefers ydotool on KDE/GNOME and wtype on wlroots for reliable insertion', async () => {
+    vi.stubEnv('XDG_SESSION_TYPE', 'wayland'); vi.stubEnv('WAYLAND_DISPLAY', 'wayland-0');
+    const run = vi.fn<LinuxCommand>().mockImplementation(async file => file === 'pgrep' ? '123\n' : '');
+    const find = async (name: string) => ['wl-copy', 'wl-paste', 'wtype', 'ydotool'].includes(name) ? `/usr/bin/${name}` : undefined;
+    const kde = new LinuxNative(run, find, undefined, async () => true);
+    vi.stubEnv('XDG_CURRENT_DESKTOP', 'KDE'); vi.stubEnv('KDE_FULL_SESSION', 'true');
+    await kde.start();
+    expect(kde.capabilities().linux?.pasteBackend).toBe('ydotool');
+
+    vi.stubEnv('XDG_CURRENT_DESKTOP', 'niri'); vi.stubEnv('KDE_FULL_SESSION', ''); vi.stubEnv('NIRI_SOCKET', '/run/user/1000/niri.sock');
+    const niri = new LinuxNative(run, find, undefined, async () => true);
+    await niri.start();
+    expect(niri.capabilities().linux?.pasteBackend).toBe('wtype');
   });
 
   it('detects the compositor and the GlobalShortcuts portal without claiming portal registration', async () => {

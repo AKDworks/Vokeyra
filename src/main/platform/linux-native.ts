@@ -136,11 +136,19 @@ export class LinuxNative {
 
   private pasteBackend(): PasteBackend | undefined {
     if (this.session !== 'wayland') return undefined;
-    if (this.tools.wtype && !this.broken.has('wtype')) return 'wtype';
-    if (this.tools.ydotool && this.ydotoolReady && !this.broken.has('ydotool')
-      && this.tools['wl-copy'] && this.tools['wl-paste']) return 'ydotool';
-    if (this.tools.dotool && this.dotoolReady && !this.broken.has('dotool')
-      && this.tools['wl-copy'] && this.tools['wl-paste']) return 'dotool';
+    // KWin and Mutter do not reliably expose the virtual-keyboard protocol used
+    // by wtype; ydotool is the documented path there. wtype remains first on
+    // wlroots compositors (niri/Sway/Hyprland).
+    const ydotoolFirst = this.compositor === 'kde' || this.compositor === 'gnome';
+    const order: PasteBackend[] = ydotoolFirst
+      ? ['ydotool', 'wtype', 'dotool'] : ['wtype', 'ydotool', 'dotool'];
+    for (const backend of order) {
+      if (backend === 'wtype' && this.tools.wtype && !this.broken.has('wtype')) return 'wtype';
+      if (backend === 'ydotool' && this.tools.ydotool && this.ydotoolReady
+        && !this.broken.has('ydotool') && this.tools['wl-copy'] && this.tools['wl-paste']) return 'ydotool';
+      if (backend === 'dotool' && this.tools.dotool && this.dotoolReady
+        && !this.broken.has('dotool') && this.tools['wl-copy'] && this.tools['wl-paste']) return 'dotool';
+    }
     return undefined;
   }
 

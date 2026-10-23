@@ -27,6 +27,7 @@ optdepends=(
   'swhkd: global hotkey daemon for Wayland with press/release support'
 )
 makedepends=(
+  'base-devel'
   'git'
   'nodejs>=24'
   'npm'
