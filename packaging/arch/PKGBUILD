@@ -27,7 +27,6 @@ optdepends=(
   'swhkd: global hotkey daemon for Wayland with press/release support'
 )
 makedepends=(
-  'base-devel'
   'git'
   'nodejs>=24'
   'npm'
@@ -50,25 +49,38 @@ sha256sums=(
 
 prepare() {
   cd "${srcdir}/Vokeyra"
+
+  export CARGO_HOME="${srcdir}/cargo-home"
+  export npm_config_cache="${srcdir}/npm-cache"
+
   export ONNXRUNTIME_NODE_INSTALL=skip
   npm ci
 }
 
 build() {
   cd "${srcdir}/Vokeyra"
+
+  export CARGO_HOME="${srcdir}/cargo-home"
+  export npm_config_cache="${srcdir}/npm-cache"
+
   npm run build
   npm run pack:linux
 }
 
 package() {
   cd "${srcdir}/Vokeyra"
+
   install -Dm755 src-tauri/target/release/vokeyra "${pkgdir}/usr/bin/vokeyra"
+
   install -d "${pkgdir}/usr/lib/Vokeyra/desktop"
   cp -r dist/desktop-linux/* "${pkgdir}/usr/lib/Vokeyra/desktop/"
+
   install -Dm644 "${srcdir}/vokeyra.desktop" "${pkgdir}/usr/share/applications/vokeyra.desktop"
+
   install -Dm644 favicon/android-chrome-512x512.png "${pkgdir}/usr/share/icons/hicolor/512x512/apps/vokeyra.png"
   install -Dm644 favicon/android-chrome-192x192.png "${pkgdir}/usr/share/icons/hicolor/192x192/apps/vokeyra.png"
   install -Dm644 favicon/favicon-32x32.png "${pkgdir}/usr/share/icons/hicolor/32x32/apps/vokeyra.png"
   install -Dm644 favicon/favicon-16x16.png "${pkgdir}/usr/share/icons/hicolor/16x16/apps/vokeyra.png"
+
   install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
