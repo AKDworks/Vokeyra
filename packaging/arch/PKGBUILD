@@ -27,12 +27,17 @@ optdepends=(
   'swhkd: global hotkey daemon for Wayland with press/release support'
 )
 makedepends=(
+  'base-devel'
   'git'
   'nodejs>=24'
   'npm'
   'rust'
   'cargo'
   'cmake'
+  'pkgconf'
+  'glib2-devel'
+  'webkit2gtk-4.1'
+  'gtk3'
 )
 source=(
   "git+https://github.com/AKDworks/Vokeyra.git#tag=v${pkgver}"
